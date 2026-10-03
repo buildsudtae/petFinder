@@ -1,0 +1,76 @@
+name: pettech
+
+services:
+  traefik:
+    image: traefik:v3.7.4
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - --api.insecure=true
+      - --entrypoints.web.address=:80
+    ports:
+      - "8000:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [petnet]
+
+  api:
+    build:
+      context: ../api
+      args:
+        APP_VERSION: ${APP_VERSION:-0.0.0}
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
+        BUILD_NUMBER: ${BUILD_NUMBER:-0}
+    image: pettech-api:${IMAGE_TAG:-dev}
+    environment:
+      DATABASE_URL: postgresql+psycopg://pettech:${POSTGRES_PASSWORD}@db:5432/pettech
+      JWT_SECRET: ${JWT_SECRET}
+      RABBITMQ_URL: amqp://pettech:${RABBITMQ_PASSWORD}@rabbitmq:5672//
+      UPLOAD_DIR: /data/uploads
+    volumes:
+      - uploads:/data/uploads
+    deploy:
+      replicas: 2
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/api/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    depends_on:
+      db:
+        condition: service_healthy
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: petnet
+      traefik.http.routers.api.entrypoints: web
+      traefik.http.routers.api.rule: PathPrefix(`/api`)
+      traefik.http.routers.api.service: api
+      traefik.http.routers.api.middlewares: api-rl@docker
+      traefik.http.middlewares.api-rl.ratelimit.average: "20"
+      traefik.http.middlewares.api-rl.ratelimit.burst: "40"
+      traefik.http.services.api.loadbalancer.server.port: "8000"
+    networks: [petnet]
+
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: pettech
+      POSTGRES_USER: pettech
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pettech -d pettech"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [petnet]
+
+volumes:
+  pgdata:
+  uploads:
+
+networks:
+  petnet:
+    name: petnet
