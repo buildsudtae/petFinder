@@ -2,8 +2,12 @@ from fastapi import FastAPI
 from sqlalchemy import create_engine, text
 
 from app.config import get_settings
+from app.domain.auth.router import router as auth_router
+from app.errors import install_error_handlers
 
 app = FastAPI(title="Lost Pet Finder API", docs_url="/api/docs", openapi_url="/api/openapi.json")
+install_error_handlers(app)
+app.include_router(auth_router)
 
 
 @app.get("/api/health")
