@@ -1,6 +1,0 @@
-pyproject.toml
-pettech_api.egg-info/PKG-INFO
-pettech_api.egg-info/SOURCES.txt
-pettech_api.egg-info/dependency_links.txt
-pettech_api.egg-info/requires.txt
-pettech_api.egg-info/top_level.txt
