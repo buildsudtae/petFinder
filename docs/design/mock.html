@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lost Pet Finder — Visual mock</title>
+<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FBFAF8; --paper-raised:#FFFFFF; --ink:#16181D; --ink-2:#4A4F58; --ink-3:#767C86;
+  --rule:#DCD8D1; --rule-strong:#B4AEA4;
+  --alert:#A52822; --alert-wash:#FBEDEB; --lead:#8A5A12; --lead-wash:#FAF1E2;
+  --found:#1F6B41; --found-wash:#E8F3EC; --focus:#16181D;
+  --font-display:'Anuphan','IBM Plex Sans Thai',system-ui,sans-serif;
+  --font-body:'IBM Plex Sans Thai',system-ui,sans-serif;
+  --radius:3px; --motion:180ms cubic-bezier(.2,0,.2,1);
+}
+@media (prefers-reduced-motion:reduce){:root{--motion:1ms}}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){
+  --paper:#14161A;--paper-raised:#1B1E23;--ink:#F2F0EC;--ink-2:#B9BDC4;--ink-3:#8B9099;
+  --rule:#2E3238;--rule-strong:#474C54;--alert:#F0837A;--alert-wash:#2A1917;
+  --lead:#E0B169;--lead-wash:#251E12;--found:#76C796;--found-wash:#13251B;--focus:#F2F0EC;}}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font-body);
+  font-size:17px;line-height:1.75;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--font-display);line-height:1.3;margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px 80px}
+.note{font-size:13px;color:var(--ink-3);border-left:3px solid var(--rule-strong);
+  padding-left:12px;margin:40px 0 16px}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+
+header.top{border-bottom:1px solid var(--rule);background:var(--paper-raised)}
+header.top .bar{max-width:1180px;margin:0 auto;padding:14px 16px;display:flex;
+  align-items:center;justify-content:space-between}
+.brand{font-family:var(--font-display);font-weight:700;font-size:20px;letter-spacing:-.01em}
+.navlinks{display:flex;gap:20px;font-size:15px}
+.navlinks a{color:var(--ink-2);text-decoration:underline;text-underline-offset:3px}
+
+.filters{display:flex;gap:8px;flex-wrap:wrap;padding:16px 0;border-bottom:1px solid var(--rule);
+  align-items:center}
+.sel{appearance:none;font:inherit;font-size:15px;background:var(--paper-raised);color:var(--ink);
+  border:1px solid var(--rule-strong);border-radius:var(--radius);padding:10px 14px;min-height:44px}
+.count{margin-left:auto;font-size:14px;color:var(--ink-3)}
+
+/* status */
+.status{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;
+  padding:5px 10px;border-radius:var(--radius);line-height:1.2}
+.status svg{width:16px;height:16px;flex:none}
+.s-search{color:var(--alert);background:var(--alert-wash);border:2px solid var(--alert)}
+.s-lead{color:var(--lead);background:var(--lead-wash);border:2px solid var(--lead);
+  clip-path:polygon(0 0,calc(100% - 9px) 0,100% 9px,100% 100%,0 100%)}
+.s-found{color:var(--found);background:var(--found-wash);border:2px dashed var(--found)}
+
+/* list rows */
+.row{display:grid;grid-template-columns:minmax(120px,38%) 1fr;gap:16px;padding:20px 0;
+  border-top:1px solid var(--rule);align-items:start}
+.row:first-of-type{border-top:0}
+.photo{position:relative;aspect-ratio:4/3;background:var(--rule);border-radius:2px;overflow:hidden}
+.photo img{width:100%;height:100%;object-fit:cover;display:block}
+.stamp{position:absolute;inset:auto 6px 10px 6px;transform:rotate(-8deg);
+  border:2.5px solid var(--found);color:var(--found);background:color-mix(in srgb,var(--paper-raised) 90%,transparent);
+  font-family:var(--font-display);font-weight:700;font-size:15px;text-align:center;
+  padding:4px 0;border-radius:2px;letter-spacing:.02em}
+.clock{font-family:var(--font-display);font-weight:700;font-size:40px;line-height:1.05;
+  letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.clock small{display:block;font-family:var(--font-body);font-weight:400;font-size:14px;
+  color:var(--ink-3);letter-spacing:0}
+.facts{margin:10px 0 12px}
+.facts b{font-weight:600}
+.facts .meta{color:var(--ink-2);font-size:15px}
+
+/* buttons */
+.btn{font:inherit;font-weight:600;min-height:48px;padding:0 22px;border-radius:var(--radius);
+  border:1.5px solid var(--ink);background:var(--ink);color:var(--paper);cursor:pointer;
+  transition:transform var(--motion)}
+.btn:active{transform:translateY(1px)}
+.btn.ghost{background:transparent;color:var(--ink)}
+.btn.danger{background:transparent;color:var(--alert);border-color:var(--alert)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+
+/* detail */
+.detail{max-width:640px}
+.hero{position:relative;aspect-ratio:16/10;background:var(--rule);border-radius:2px;overflow:hidden}
+.hero img{width:100%;height:100%;object-fit:cover;display:block}
+.hero .stamp{inset:auto 18% 16%;font-size:26px;padding:8px 0}
+.timeline{margin-top:28px;border-top:1px solid var(--rule);padding-top:20px}
+.tl-item{display:grid;grid-template-columns:18px 1fr;gap:12px;padding:14px 0;
+  border-left:0}
+.tl-dot{position:relative}
+.tl-dot::before{content:"";position:absolute;left:6px;top:8px;width:7px;height:7px;
+  background:var(--ink);transform:rotate(45deg)}
+.tl-dot::after{content:"";position:absolute;left:9px;top:20px;bottom:-14px;width:1px;background:var(--rule)}
+.tl-item:last-child .tl-dot::after{display:none}
+.tl-when{font-size:14px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.tl-who{font-weight:600}
+
+/* form + error */
+.form{max-width:560px}
+.peek{display:grid;grid-template-columns:84px 1fr;gap:12px;align-items:center;
+  border:1px solid var(--rule);border-radius:var(--radius);padding:10px;margin:16px 0 24px;
+  background:var(--paper-raised)}
+.peek .photo{aspect-ratio:1/1}
+.alertbar{display:grid;grid-template-columns:22px 1fr;gap:10px;background:var(--alert-wash);
+  border-left:4px solid var(--alert);border-radius:2px;padding:14px 16px;margin-bottom:24px}
+.alertbar b{color:var(--alert);display:block}
+.alertbar a{color:var(--alert);font-weight:600}
+.field{display:grid;gap:8px;margin-bottom:20px}
+.field label{font-weight:600;font-size:15px}
+.field .help{font-size:14px;color:var(--ink-3)}
+.field input,.field textarea{font:inherit;background:var(--paper-raised);color:var(--ink);
+  border:1px solid var(--rule-strong);border-radius:var(--radius);padding:12px 14px;min-height:48px}
+.field textarea{min-height:110px;resize:vertical;line-height:1.7}
+.field.bad input{border-width:2px;border-color:var(--alert)}
+.field .err{display:flex;gap:6px;align-items:center;color:var(--alert);font-size:14px;font-weight:600}
+.counter{font-size:13px;color:var(--ink-3);text-align:right;font-variant-numeric:tabular-nums}
+@media (min-width:860px){
+  .split{display:grid;grid-template-columns:3fr 2fr;gap:48px;align-items:start}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="bar">
+    <span class="brand">ตามหา</span>
+    <nav class="navlinks"><a href="#">ประกาศของฉัน</a><a href="#">ออกจากระบบ</a></nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+<p class="note">หน้า 1 — รายการประกาศสาธารณะ · เวลาที่หายไปเป็นตัวเลขที่ใหญ่ที่สุด · สถานะสื่อด้วยข้อความ+ไอคอน+รูปทรงกรอบ ไม่ใช่สีเดียว</p>
+
+<div class="filters">
+  <select class="sel"><option>ทุกชนิด</option><option>แมว</option><option>สุนัข</option></select>
+  <select class="sel"><option>ทุกเขต</option><option selected>บางกะปิ</option></select>
+  <select class="sel"><option>ที่ยังตามหา</option><option>พบแล้ว</option></select>
+  <span class="count">พบ 24 ประกาศ</span>
+</div>
+
+<div class="split">
+<div>
+  <article class="row">
+    <div class="photo"><img alt="แมวขาว ปลอกคอแดง หางด้วน ชื่อขาวมณี" src="https://picsum.photos/seed/khaomanee/640/480"></div>
+    <div>
+      <p class="clock">3 ชม. 20 นาที<small>ที่ผ่านมา · เห็นครั้งสุดท้าย 14:20</small></p>
+      <p class="facts"><b>ขาวมณี</b> · แมว · ขาว<br>
+        <span class="meta">บางกะปิ — ปากซอยหมู่บ้าน · ปลอกคอแดง หางด้วน</span></p>
+      <span class="status s-search">
+        <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM112,176a64,64,0,1,1,64-64A64.07,64.07,0,0,1,112,176Z"/></svg>
+        กำลังตามหา</span>
+    </div>
+  </article>
+
+  <article class="row">
+    <div class="photo"><img alt="สุนัขพันธุ์ผสมสีน้ำตาล ปลอกคอฟ้า ชื่อไข่เจียว" src="https://picsum.photos/seed/khaijiao/640/480">
+      <span class="stamp">พบแล้ว 2 ต.ค.</span></div>
+    <div>
+      <p class="clock">2 วัน 4 ชม.<small>ที่ผ่านมา · ปิดประกาศแล้ว</small></p>
+      <p class="facts"><b>ไข่เจียว</b> · สุนัข · น้ำตาล<br>
+        <span class="meta">ห้วยขวาง — ซอยอินทามระ 8 · 3 เบาะแส</span></p>
+      <span class="status s-found">
+        <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm45.66,85.66-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32Z"/></svg>
+        พบแล้ว</span>
+    </div>
+  </article>
+
+  <article class="row">
+    <div class="photo"><img alt="แมวลายสลิด หูซ้ายแหว่ง ชื่อปอมปอม" src="https://picsum.photos/seed/pompom/640/480"></div>
+    <div>
+      <p class="clock">11 ชม. 5 นาที<small>ที่ผ่านมา · เห็นครั้งสุดท้าย 06:35</small></p>
+      <p class="facts"><b>ปอมปอม</b> · แมว · ลายสลิด<br>
+        <span class="meta">บางกะปิ — หลังตลาดนัด · หูซ้ายแหว่ง</span></p>
+      <span class="status s-lead">
+        <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M128,64a40,40,0,1,0,40,40A40,40,0,0,0,128,64Zm0,64a24,24,0,1,1,24-24A24,24,0,0,1,128,128Zm0-112a88.1,88.1,0,0,0-88,88c0,31.4,14.51,64.68,42,96.25a254.19,254.19,0,0,0,41.45,38.3,8,8,0,0,0,9.18,0A254.19,254.19,0,0,0,174,200.25c27.45-31.57,42-64.85,42-96.25A88.1,88.1,0,0,0,128,16Z"/></svg>
+        มีเบาะแส</span>
+    </div>
+  </article>
+</div>
+
+<aside>
+  <h3 style="font-size:20px">แจ้งสัตว์หายของคุณ</h3>
+  <p style="color:var(--ink-2);font-size:15px">กรอกครั้งเดียว ประกาศขึ้นทันที คนในเขตเดียวกันเห็นและส่งเบาะแสกลับได้</p>
+  <button class="btn">แจ้งสัตว์หาย</button>
+  <hr style="border:0;border-top:1px solid var(--rule);margin:28px 0">
+  <h3 style="font-size:17px">เขตที่มีประกาศ</h3>
+  <p style="font-size:15px;color:var(--ink-2);font-variant-numeric:tabular-nums">
+    บางกะปิ 6 · ห้วยขวาง 4 · วังทองหลาง 3 · ลาดพร้าว 2</p>
+</aside>
+</div>
+
+<p class="note">หน้า 2 — รายละเอียดประกาศ · รูปกินพื้นที่มากที่สุด · ปุ่มหลักเดียวของหน้า · timeline เบาะแสใหม่สุดอยู่บน</p>
+
+<div class="detail">
+  <div class="hero"><img alt="แมวขาว ปลอกคอแดง หางด้วน ชื่อขาวมณี" src="https://picsum.photos/seed/khaomanee2/960/600"></div>
+  <p style="margin:14px 0 0"><span class="status s-lead">
+    <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M128,64a40,40,0,1,0,40,40A40,40,0,0,0,128,64Zm0,64a24,24,0,1,1,24-24A24,24,0,0,1,128,128Zm0-112a88.1,88.1,0,0,0-88,88c0,31.4,14.51,64.68,42,96.25a254.19,254.19,0,0,0,41.45,38.3,8,8,0,0,0,9.18,0A254.19,254.19,0,0,0,174,200.25c27.45-31.57,42-64.85,42-96.25A88.1,88.1,0,0,0,128,16Z"/></svg>
+    มีเบาะแส</span></p>
+  <p class="clock" style="margin:16px 0 0">3 ชม. 20 นาที<small>ที่ผ่านมา · เห็นครั้งสุดท้าย 3 ต.ค. 14:20</small></p>
+  <p class="facts" style="font-size:19px"><b>ขาวมณี</b> · แมว · ขาว<br>
+    <span class="meta">ปลอกคอแดง หางด้วน ตาสองสี · บางกะปิ — ปากซอยหมู่บ้าน</span></p>
+  <p><button class="btn">ส่งเบาะแสที่พบ</button>
+     <button class="btn ghost" style="margin-left:8px">ปิดประกาศ — พบสัตว์แล้ว</button></p>
+
+  <div class="timeline">
+    <h3 style="font-size:17px;margin-bottom:4px">เบาะแส 3 รายการ</h3>
+    <div class="tl-item"><div class="tl-dot"></div><div>
+      <p class="tl-when">40 นาทีที่ผ่านมา</p>
+      <p style="margin:2px 0"><span class="tl-who">สมใจ</span> · บางกะปิ หน้าร้านสะดวกซื้อ ปากซอย 5</p>
+      <p style="margin:2px 0;color:var(--ink-2)">เห็นเดินเข้าซอย 5 ยังอยู่แถวนั้น ไม่ได้จับไว้</p></div></div>
+    <div class="tl-item"><div class="tl-dot"></div><div>
+      <p class="tl-when">2 ชม. 10 นาทีที่ผ่านมา</p>
+      <p style="margin:2px 0"><span class="tl-who">ธนกฤต</span> · บางกะปิ หลังตลาดนัด</p>
+      <p style="margin:2px 0;color:var(--ink-2)">เห็นแมวขาวหางด้วนนอนใต้รถ ไม่แน่ใจตัวเดียวกันไหม</p></div></div>
+    <div class="tl-item"><div class="tl-dot"></div><div>
+      <p class="tl-when">2 ชม. 48 นาทีที่ผ่านมา</p>
+      <p style="margin:2px 0"><span class="tl-who">อารยา</span> · บางกะปิ ปากซอยหมู่บ้าน</p>
+      <p style="margin:2px 0;color:var(--ink-2)">เห็นวิ่งข้ามถนนไปทางฝั่งตลาด</p></div></div>
+  </div>
+</div>
+
+<p class="note">หน้า 3 — ส่งเบาะแส ตอนเจอ 409 (เจ้าของเพิ่งปิดประกาศ) · ข้อความที่พิมพ์ไว้ยังอยู่ · ปุ่มถูกปิดและเปลี่ยนข้อความ · มีทางออกให้ไปต่อ</p>
+
+<form class="form" onsubmit="return false">
+  <h2 style="font-size:24px">ส่งเบาะแส: ขาวมณี</h2>
+  <div class="peek">
+    <div class="photo"><img alt="แมวขาว ปลอกคอแดง หางด้วน ชื่อขาวมณี" src="https://picsum.photos/seed/khaomanee3/200/200"></div>
+    <p style="margin:0;font-size:15px"><b>แมวขาว ปลอกคอแดง หางด้วน</b><br>
+      <span style="color:var(--ink-2)">เทียบกับตัวที่คุณเห็นตรงหน้าก่อนส่ง</span></p>
+  </div>
+
+  <div class="alertbar" role="alert">
+    <svg viewBox="0 0 256 256" fill="var(--alert)" aria-hidden="true" style="width:22px;height:22px"><path d="M236.8,188.09,149.35,36.22a24,24,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM120,104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm8,88a12,12,0,1,1,12-12A12,12,0,0,1,128,192Z"/></svg>
+    <span><b>เจ้าของพบสัตว์แล้ว ประกาศนี้ปิดรับเบาะแส</b>
+      ข้อความที่คุณพิมพ์ยังอยู่ด้านล่าง หากเห็นสัตว์ตัวอื่น
+      <a href="#">ดูประกาศอื่นในเขตบางกะปิ →</a></span>
+  </div>
+
+  <div class="field">
+    <label for="p">รูปที่ถ่ายได้ (ถ้ามี)</label>
+    <input id="p" type="file" accept="image/png,image/jpeg,image/webp">
+    <span class="help">รับเฉพาะ PNG, JPEG หรือ WebP ขนาดไม่เกิน 5 MB</span>
+  </div>
+
+  <div class="field bad">
+    <label for="d">เขตที่พบ *</label>
+    <input id="d" value="" aria-describedby="d-err" aria-invalid="true">
+    <span class="err" id="d-err">
+      <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" style="width:15px;height:15px"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm-8,56a8,8,0,0,1,16,0v56a8,8,0,0,1-16,0Zm8,104a12,12,0,1,1,12-12A12,12,0,0,1,128,184Z"/></svg>
+      กรุณาระบุเขตหรือบริเวณที่พบ</span>
+  </div>
+
+  <div class="field">
+    <label for="a">จุดสังเกต</label>
+    <input id="a" value="หน้าร้านสะดวกซื้อ ปากซอย 5">
+  </div>
+
+  <div class="field">
+    <label for="n">รายละเอียดที่พบ</label>
+    <textarea id="n">เห็นเดินเข้าซอย 5 ตอนนี้ยังอยู่แถวนั้น ไม่ได้จับไว้เพราะกลัววิ่งหนี</textarea>
+    <span class="counter">76 / 1000</span>
+  </div>
+
+  <button class="btn" disabled>ประกาศนี้ปิดรับเบาะแสแล้ว</button>
+</form>
+
+</div>
+</body>
+</html>

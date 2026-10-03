@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ตามหา — Visual mock v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F4F2EC; --raised:#FCFBF7; --ink:#1A1A1C; --ink-2:#4C4B4E; --ink-3:#7A787C;
+  --rule:#D8D4C9; --rule-2:#A9A49A;
+  --oxblood:#8E2A22; --oxblood-wash:#F6E7E3;
+  --ochre:#7A5210;  --ochre-wash:#F5ECD9;
+  --forest:#1C5E3A; --forest-wash:#E4EFE6;
+  --shadow:0 22px 48px -28px rgba(26,26,28,.34);
+  --shadow-s:0 2px 0 0 var(--rule);
+  --fd:'Anuphan','IBM Plex Sans Thai',system-ui,sans-serif;
+  --fb:'IBM Plex Sans Thai',system-ui,sans-serif;
+  --m:200ms cubic-bezier(.2,0,.2,1);
+}
+@media (prefers-reduced-motion:reduce){:root{--m:1ms}}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){
+  --paper:#15161A; --raised:#1D1F24; --ink:#F3F1EB; --ink-2:#BCBAB5; --ink-3:#8C8A86;
+  --rule:#2F3238; --rule-2:#4D5057;
+  --oxblood:#EE8A80; --oxblood-wash:#2B1917;
+  --ochre:#E2B36B;  --ochre-wash:#261E11;
+  --forest:#7CCB9A; --forest-wash:#132419;
+  --shadow:0 22px 48px -26px rgba(0,0,0,.6);
+}}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--fb);
+  font-size:17px;line-height:1.75;-webkit-font-smoothing:antialiased}
+/* ผิวกระดาษ — fixed + pointer-events:none เท่านั้น ไม่อยู่ใน scroll container */
+body::after{content:"";position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.055'/%3E%3C/svg%3E")}
+/* ตัวไทยมีวรรณยุกต์บน-ล่าง: tracking ติดลบมากจะชนกัน จำกัดที่ -.018em */
+h1,h2,h3,h4{font-family:var(--fd);margin:0;line-height:1.26;letter-spacing:-.018em}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--ink);outline-offset:3px;border-radius:2px}
+.tab{font-variant-numeric:tabular-nums}
+.wrap{max-width:1240px;margin:0 auto;padding:0 20px}
+.sheet-label{font-size:12.5px;color:var(--ink-3);border-top:1px solid var(--rule);
+  padding-top:10px;margin:72px 0 24px}
+
+/* ───────── masthead ───────── */
+.mast{border-bottom:2px solid var(--ink);background:var(--raised)}
+.mast-in{max-width:1240px;margin:0 auto;padding:16px 20px;display:flex;align-items:baseline;
+  gap:10px 18px;flex-wrap:wrap}
+.logo{font-family:var(--fd);font-weight:700;font-size:27px;letter-spacing:-.03em;white-space:nowrap}
+.logo i{font-style:normal;color:var(--oxblood)}
+.mast-in nav{margin-left:auto;display:flex;gap:18px;font-size:15px;flex-wrap:wrap}
+@media(max-width:560px){
+  .mast-in nav{margin-left:0;width:100%;border-top:1px solid var(--rule);padding-top:10px}
+}
+.mast-in nav a{text-decoration:none;border-bottom:1.5px solid transparent;padding-bottom:2px}
+.mast-in nav a[aria-current]{border-bottom-color:var(--ink);font-weight:600}
+.mast-in nav a:hover{border-bottom-color:var(--rule-2)}
+
+.board{display:grid;gap:28px;padding:44px 0 32px;border-bottom:1px solid var(--rule)}
+@media(min-width:900px){.board{grid-template-columns:1.35fr .9fr;gap:72px;align-items:end;padding:64px 0 36px}}
+.board h1{font-size:clamp(34px,6.4vw,62px);font-weight:700;letter-spacing:-.045em;line-height:1.02}
+.board h1 em{font-style:normal;display:block;color:var(--ink-3);font-weight:500;
+  font-size:clamp(17px,2.2vw,22px);letter-spacing:-.01em;line-height:1.5;margin-top:16px;max-width:30ch}
+.tallies{display:flex;gap:0;border-top:1px solid var(--ink);border-bottom:1px solid var(--rule)}
+.tally{flex:1;padding:14px 0}
+.tally + .tally{border-left:1px solid var(--rule);padding-left:16px}
+.tally b{display:block;font-family:var(--fd);font-weight:700;font-size:30px;letter-spacing:-.03em}
+.tally span{font-size:13.5px;color:var(--ink-3)}
+
+/* ───────── filter chips ───────── */
+.chips{display:flex;gap:8px;flex-wrap:wrap;padding:22px 0;align-items:center}
+.chip{font:inherit;font-size:15px;font-weight:500;min-height:44px;padding:0 16px;cursor:pointer;
+  background:transparent;color:var(--ink-2);border:1px solid var(--rule-2);border-radius:999px;
+  transition:background var(--m),color var(--m),border-color var(--m)}
+.chip:hover{border-color:var(--ink);color:var(--ink)}
+.chip[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:var(--paper);font-weight:600}
+.chip-sep{width:1px;height:28px;background:var(--rule);margin:0 6px}
+.chips .meta{margin-left:auto;font-size:13.5px;color:var(--ink-3)}
+
+/* ───────── status ───────── */
+.status{display:inline-flex;align-items:center;gap:7px;font-family:var(--fd);font-size:14px;
+  font-weight:600;padding:6px 12px;line-height:1.15;letter-spacing:-.005em}
+.status svg{width:15px;height:15px;flex:none}
+.st-search{color:var(--oxblood);background:var(--oxblood-wash);border:1.5px solid var(--oxblood)}
+.st-lead{color:var(--ochre);background:var(--ochre-wash);border:1.5px solid var(--ochre);
+  clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%)}
+.st-found{color:var(--forest);background:var(--forest-wash);border:1.5px dashed var(--forest)}
+
+/* ───────── notice ───────── */
+.notices{display:grid;gap:0}
+.notice{display:grid;gap:18px;padding:30px 0;border-top:1px solid var(--rule);align-items:start}
+@media(min-width:760px){
+  .notice{grid-template-columns:230px 1fr 190px;gap:34px;align-items:start}
+  .notice.flip{grid-template-columns:190px 1fr 230px}
+}
+/* มือถือ: เวลาที่หายไปต้องมาก่อนเสมอ แล้วรูป แล้วรายละเอียด */
+@media(max-width:759px){
+  .notice{grid-template-columns:1fr;gap:18px}
+  .notice:not(.flip)>*:nth-child(3){order:1}
+  .notice:not(.flip)>*:nth-child(1){order:2}
+  .notice:not(.flip)>*:nth-child(2){order:3}
+  .notice.flip>*:nth-child(1){order:1}
+  .notice.flip>*:nth-child(3){order:2}
+  .notice.flip>*:nth-child(2){order:3}
+  .frame{max-width:290px}
+}
+.frame{position:relative;background:var(--raised);padding:9px;box-shadow:var(--shadow);
+  border:1px solid var(--rule)}
+.frame::before{content:"";position:absolute;top:-7px;left:50%;translate:-50% 0;width:34px;height:13px;
+  background:linear-gradient(180deg,rgba(255,255,255,.55),rgba(0,0,0,.08));
+  border:1px solid var(--rule);rotate:-1.5deg} /* เทปกาวชิ้นเดียว ไม่ทำทุกใบ */
+.frame.no-tape::before{display:none}
+.shot{position:relative;aspect-ratio:4/5;overflow:hidden;background:var(--ochre-wash)}
+.shot svg{position:absolute;inset:0;width:100%;height:100%}
+/* halftone ถ่ายเอกสาร — ทำให้รูปมือถือของผู้ใช้ที่คุณภาพต่างกันดูเป็นระบบเดียว */
+.shot::after{content:"";position:absolute;inset:0;mix-blend-mode:multiply;opacity:.4;
+  background-image:radial-gradient(var(--ink) 29%,transparent 30%);
+  background-size:3.5px 3.5px}
+.cap{position:absolute;left:0;right:0;bottom:0;background:var(--ink);color:var(--paper);
+  font-size:12.5px;padding:6px 9px;letter-spacing:.01em;display:flex;justify-content:space-between}
+.stamp{position:absolute;left:8%;right:8%;top:40%;rotate:-7deg;border:3px solid var(--forest);
+  color:var(--forest);background:color-mix(in srgb,var(--raised) 86%,transparent);
+  font-family:var(--fd);font-weight:700;font-size:21px;text-align:center;padding:5px 0;
+  letter-spacing:-.01em;box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--forest) 35%,transparent)}
+.stamp span{display:block;font-family:var(--fb);font-weight:500;font-size:11.5px;letter-spacing:.04em}
+
+.clock{display:block}
+.clock b{display:block;font-family:var(--fd);font-weight:700;font-size:clamp(38px,5.6vw,54px);
+  letter-spacing:-.05em;line-height:.95;font-variant-numeric:tabular-nums}
+.clock span{display:block;font-size:13.5px;color:var(--ink-3);margin-top:8px;
+  border-top:1px solid var(--rule);padding-top:7px}
+.notice h3{font-size:25px;font-weight:600;margin-bottom:6px}
+.notice h3 small{font-family:var(--fb);font-weight:400;font-size:15.5px;color:var(--ink-3);
+  letter-spacing:0;margin-left:8px}
+.marks{color:var(--ink-2);max-width:40ch;margin:0 0 14px}
+.where{font-size:15px;color:var(--ink-3);margin:0 0 16px}
+.where b{color:var(--ink-2);font-weight:600}
+.leads{font-size:14px;color:var(--ink-3);margin:14px 0 0}
+
+/* ───────── buttons ───────── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;font:inherit;
+  font-family:var(--fd);font-weight:600;font-size:16.5px;min-height:50px;padding:0 24px;cursor:pointer;
+  background:var(--ink);color:var(--paper);border:1.5px solid var(--ink);
+  box-shadow:0 2.5px 0 0 var(--rule-2);transition:transform var(--m),box-shadow var(--m)}
+.btn:hover{transform:translateY(-1px);box-shadow:0 3.5px 0 0 var(--rule-2)}
+.btn:active{transform:translateY(1.5px);box-shadow:0 1px 0 0 var(--rule-2)}
+.btn.ghost{background:transparent;color:var(--ink)}
+.btn.danger{background:transparent;color:var(--oxblood);border-color:var(--oxblood)}
+.btn[disabled]{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.btn svg{width:18px;height:18px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+
+/* ───────── detail ───────── */
+.detail{display:grid;gap:34px}
+@media(min-width:960px){.detail{grid-template-columns:1fr 1.15fr;gap:60px;align-items:start}}
+.detail .frame{max-width:460px}
+.detail .shot{aspect-ratio:4/5}
+.eyebrow{font-size:13.5px;color:var(--ink-3);display:flex;gap:10px;align-items:center;margin-bottom:14px}
+.eyebrow::after{content:"";flex:1;height:1px;background:var(--rule)}
+.detail h2{font-size:clamp(28px,4vw,38px);font-weight:700;letter-spacing:-.04em}
+.dl{display:grid;grid-template-columns:auto 1fr;gap:4px 18px;margin:22px 0 26px;
+  border-top:1px solid var(--ink);padding-top:16px;font-size:15.5px}
+.dl dt{color:var(--ink-3)}
+.dl dd{margin:0;font-weight:500}
+
+.timeline{margin-top:40px;padding-top:0}
+.timeline h3{font-size:17px;font-weight:600;display:flex;align-items:center;gap:12px;
+  margin-bottom:6px}
+.timeline h3::after{content:"";flex:1;height:1px;background:var(--rule)}
+.ev{display:grid;grid-template-columns:96px 1fr;gap:18px;padding:18px 0;border-bottom:1px solid var(--rule)}
+.ev:last-child{border-bottom:0}
+.ev .when{font-size:13.5px;color:var(--ink-3);text-align:right;padding-top:3px}
+.ev .who{font-weight:600}
+.ev .who i{font-style:normal;color:var(--ink-3);font-weight:400;font-size:14.5px;margin-left:8px}
+.ev p{margin:4px 0 0;color:var(--ink-2)}
+.ev .thumb{width:62px;height:62px;flex:none;margin-top:10px;border:1px solid var(--rule);
+  background:var(--ochre-wash);position:relative;overflow:hidden}
+.ev .thumb svg{position:absolute;inset:0;width:100%;height:100%}
+
+/* ───────── form ───────── */
+.form{max-width:600px}
+.peek{display:grid;grid-template-columns:92px 1fr;gap:16px;align-items:center;margin:20px 0 28px;
+  padding:12px;background:var(--raised);border:1px solid var(--rule);box-shadow:var(--shadow)}
+.peek .shot{aspect-ratio:1/1}
+.peek p{margin:0;font-size:15px}
+.alertbar{display:grid;grid-template-columns:24px 1fr;gap:12px;background:var(--oxblood-wash);
+  border:1.5px solid var(--oxblood);border-left-width:5px;padding:16px 18px;margin-bottom:28px}
+.alertbar strong{display:block;font-family:var(--fd);font-size:17px;color:var(--oxblood);margin-bottom:3px}
+.alertbar a{color:var(--oxblood);font-weight:600;text-underline-offset:3px}
+.field{display:grid;gap:9px;margin-bottom:24px}
+.field label{font-family:var(--fd);font-weight:600;font-size:15.5px}
+.field label i{font-style:normal;color:var(--oxblood)}
+.field .help{font-size:14px;color:var(--ink-3)}
+.inp{font:inherit;background:var(--raised);color:var(--ink);border:1px solid var(--rule-2);
+  padding:13px 15px;min-height:50px;transition:border-color var(--m),box-shadow var(--m)}
+.inp:focus{border-color:var(--ink);box-shadow:inset 0 -2px 0 0 var(--ink);outline:none}
+textarea.inp{min-height:118px;resize:vertical;line-height:1.7}
+.field.bad .inp{border-color:var(--oxblood);border-width:1.5px}
+.err{display:flex;gap:7px;align-items:center;color:var(--oxblood);font-size:14px;font-weight:600}
+.err svg{width:15px;height:15px;flex:none}
+.sugg{display:flex;gap:7px;flex-wrap:wrap}
+.sugg button{font:inherit;font-size:14px;min-height:38px;padding:0 13px;cursor:pointer;
+  background:transparent;border:1px dashed var(--rule-2);color:var(--ink-2);border-radius:999px}
+.sugg button:hover{border-style:solid;border-color:var(--ink);color:var(--ink)}
+.drop{display:grid;place-items:center;gap:8px;border:1.5px dashed var(--rule-2);background:var(--raised);
+  padding:26px 18px;text-align:center;cursor:pointer;transition:border-color var(--m)}
+.drop:hover{border-color:var(--ink)}
+.drop svg{width:26px;height:26px;color:var(--ink-3)}
+.drop b{font-family:var(--fd);font-size:16px}
+.drop span{font-size:13.5px;color:var(--ink-3)}
+.counter{font-size:13px;color:var(--ink-3);text-align:right}
+</style>
+</head>
+<body>
+
+<header class="mast">
+  <div class="mast-in">
+    <span class="logo">ตาม<i>หา</i></span>
+    <nav>
+      <a href="#" aria-current="page">ประกาศทั้งหมด</a>
+      <a href="#">ประกาศของฉัน</a>
+      <a href="#">ออกจากระบบ</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section class="board">
+    <h1>สัตว์เลี้ยงที่ยังหาไม่เจอ<em>ประกาศจากเจ้าของในเขตของคุณ ถ้าคุณเห็นตัวไหน ส่งเบาะแสให้เจ้าของได้ทันทีโดยไม่ต้องรู้เบอร์โทรใคร</em></h1>
+    <div class="tallies">
+      <div class="tally"><b class="tab">24</b><span>ยังตามหาอยู่</span></div>
+      <div class="tally"><b class="tab">9</b><span>มีเบาะแสแล้ว</span></div>
+      <div class="tally"><b class="tab">61</b><span>พบแล้วเดือนนี้</span></div>
+    </div>
+  </section>
+
+  <div class="chips">
+    <button class="chip" aria-pressed="true">ทุกชนิด</button>
+    <button class="chip" aria-pressed="false">แมว</button>
+    <button class="chip" aria-pressed="false">สุนัข</button>
+    <span class="chip-sep"></span>
+    <button class="chip" aria-pressed="true">บางกะปิ</button>
+    <button class="chip" aria-pressed="false">ห้วยขวาง</button>
+    <button class="chip" aria-pressed="false">วังทองหลาง</button>
+    <span class="chip-sep"></span>
+    <button class="chip" aria-pressed="true">ที่ยังตามหา</button>
+    <span class="meta">เรียงจากที่หายล่าสุด</span>
+  </div>
+
+  <div class="notices">
+
+    <article class="notice">
+      <div class="frame">
+        <div class="shot">
+          <svg viewBox="0 0 200 250" role="img" aria-label="แมวขาว ตาสองสี ปลอกคอแดง ชื่อขาวมณี">
+            <rect width="200" height="250" fill="#EFE7D8"/>
+            <ellipse cx="100" cy="210" rx="72" ry="54" fill="#1A1A1C" opacity=".1"/>
+            <path d="M44 96 38 44l44 26z" fill="#1A1A1C" opacity=".92"/>
+            <path d="M156 96l6-52-44 26z" fill="#1A1A1C" opacity=".92"/>
+            <path d="M50 52l26 16-24 22z" fill="#8E2A22" opacity=".5"/>
+            <path d="M150 52l-26 16 24 22z" fill="#8E2A22" opacity=".5"/>
+            <ellipse cx="100" cy="126" rx="62" ry="56" fill="#1A1A1C" opacity=".9"/>
+            <ellipse cx="100" cy="126" rx="56" ry="50" fill="#FBF7EE"/>
+            <ellipse cx="78" cy="116" rx="11" ry="13" fill="#1A1A1C"/>
+            <ellipse cx="122" cy="116" rx="11" ry="13" fill="#1A1A1C"/>
+            <circle cx="81" cy="112" r="3.4" fill="#FBF7EE"/>
+            <circle cx="125" cy="112" r="3.4" fill="#FBF7EE"/>
+            <path d="M94 142h12l-6 7z" fill="#8E2A22"/>
+            <path d="M100 149v6M100 155c-5 0-9-3-9-7M100 155c5 0 9-3 9-7" stroke="#1A1A1C" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+            <path d="M40 128l-28-8M42 138l-28 2M160 128l28-8M158 138l28 2" stroke="#1A1A1C" stroke-width="1.8" opacity=".55"/>
+            <rect x="62" y="176" width="76" height="15" rx="7" fill="#8E2A22"/>
+            <circle cx="100" cy="196" r="7" fill="#8E2A22"/>
+          </svg>
+          <span class="cap"><span>บางกะปิ</span><span class="tab">3 ต.ค. 14:20</span></span>
+        </div>
+      </div>
+      <div>
+        <h3>ขาวมณี<small>แมว · ขาว · เพศเมีย</small></h3>
+        <p class="marks">ตาสองสี หางด้วนครึ่งหนึ่ง ใส่ปลอกคอหนังสีแดงมีกระดิ่ง ขี้กลัวคน ถ้าเข้าใกล้เร็วจะวิ่งหนีเข้าท่อ</p>
+        <p class="where">เห็นครั้งสุดท้าย <b>ปากซอยหมู่บ้าน ถนนนวมินทร์ 42</b></p>
+        <span class="status st-search">
+          <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM112,176a64,64,0,1,1,64-64A64.07,64.07,0,0,1,112,176Z"/></svg>
+          กำลังตามหา</span>
+        <p class="leads">ยังไม่มีเบาะแส</p>
+      </div>
+      <div>
+        <span class="clock"><b class="tab">3:20</b><span>ชั่วโมง:นาที ที่หายไป</span></span>
+        <div class="actions" style="margin-top:18px"><button class="btn">ส่งเบาะแส</button></div>
+      </div>
+    </article>
+
+    <article class="notice flip">
+      <div>
+        <span class="clock"><b class="tab">11:05</b><span>ชั่วโมง:นาที ที่หายไป</span></span>
+        <div class="actions" style="margin-top:18px"><button class="btn ghost">ดูเบาะแส 3 รายการ</button></div>
+      </div>
+      <div>
+        <h3>ปอมปอม<small>แมว · ลายสลิด · เพศผู้</small></h3>
+        <p class="marks">หูซ้ายแหว่งเป็นรูปสามเหลี่ยม ตัวใหญ่กว่าแมวทั่วไป ไม่ใส่ปลอกคอ เข้าหาคนที่มีอาหาร</p>
+        <p class="where">เห็นครั้งสุดท้าย <b>หลังตลาดนัดบางกะปิ ฝั่งที่จอดรถ</b></p>
+        <span class="status st-lead">
+          <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M128,64a40,40,0,1,0,40,40A40,40,0,0,0,128,64Zm0,64a24,24,0,1,1,24-24A24,24,0,0,1,128,128Zm0-112a88.1,88.1,0,0,0-88,88c0,31.4,14.51,64.68,42,96.25a254.19,254.19,0,0,0,41.45,38.3,8,8,0,0,0,9.18,0A254.19,254.19,0,0,0,174,200.25c27.45-31.57,42-64.85,42-96.25A88.1,88.1,0,0,0,128,16Z"/></svg>
+          มีเบาะแส</span>
+        <p class="leads">เบาะแสล่าสุด 40 นาทีที่ผ่านมา · ซอยนวมินทร์ 46</p>
+      </div>
+      <div class="frame no-tape">
+        <div class="shot">
+          <svg viewBox="0 0 200 250" role="img" aria-label="แมวลายสลิด หูซ้ายแหว่ง ชื่อปอมปอม">
+            <rect width="200" height="250" fill="#E9E2D2"/>
+            <ellipse cx="100" cy="212" rx="70" ry="50" fill="#1A1A1C" opacity=".1"/>
+            <path d="M46 94 40 46l42 24z" fill="#5A4B38"/>
+            <path d="M154 94l6-48-42 24z" fill="#5A4B38"/>
+            <path d="M46 94 40 46l16 10z" fill="#F4F2EC"/>
+            <ellipse cx="100" cy="128" rx="60" ry="55" fill="#6E5B42"/>
+            <path d="M70 80c6 18 6 38 2 56M100 76c4 20 4 42 0 60M130 80c-6 18-6 38-2 56" stroke="#3C3124" stroke-width="7" fill="none" opacity=".75" stroke-linecap="round"/>
+            <ellipse cx="100" cy="144" rx="38" ry="28" fill="#D9CDB6"/>
+            <ellipse cx="78" cy="118" rx="11" ry="12.5" fill="#1A1A1C"/>
+            <ellipse cx="122" cy="118" rx="11" ry="12.5" fill="#1A1A1C"/>
+            <circle cx="81" cy="114" r="3.2" fill="#F4F2EC"/>
+            <circle cx="125" cy="114" r="3.2" fill="#F4F2EC"/>
+            <path d="M94 140h12l-6 7z" fill="#8E2A22"/>
+            <path d="M100 147v6M100 153c-5 0-9-3-9-7M100 153c5 0 9-3 9-7" stroke="#3C3124" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+            <path d="M42 130l-28-8M44 140l-28 2M158 130l28-8M156 140l28 2" stroke="#3C3124" stroke-width="1.8" opacity=".6"/>
+          </svg>
+          <span class="cap"><span>บางกะปิ</span><span class="tab">3 ต.ค. 06:35</span></span>
+        </div>
+      </div>
+    </article>
+
+    <article class="notice">
+      <div class="frame no-tape">
+        <div class="shot">
+          <svg viewBox="0 0 200 250" role="img" aria-label="สุนัขพันธุ์ผสมสีน้ำตาล ปลอกคอฟ้า ชื่อไข่เจียว">
+            <rect width="200" height="250" fill="#EDE4D2"/>
+            <ellipse cx="100" cy="214" rx="72" ry="48" fill="#1A1A1C" opacity=".1"/>
+            <path d="M40 102c-14-26-8-54 8-58s26 18 22 44z" fill="#6B4A2A"/>
+            <path d="M160 102c14-26 8-54-8-58s-26 18-22 44z" fill="#6B4A2A"/>
+            <ellipse cx="100" cy="124" rx="58" ry="54" fill="#8A6038"/>
+            <ellipse cx="100" cy="162" rx="34" ry="30" fill="#D6C2A2"/>
+            <ellipse cx="76" cy="112" rx="10" ry="11" fill="#1A1A1C"/>
+            <ellipse cx="124" cy="112" rx="10" ry="11" fill="#1A1A1C"/>
+            <circle cx="79" cy="108" r="3" fill="#F4F2EC"/>
+            <circle cx="127" cy="108" r="3" fill="#F4F2EC"/>
+            <ellipse cx="100" cy="156" rx="13" ry="10" fill="#1A1A1C"/>
+            <path d="M100 166v8M100 174c-7 0-12-4-12-9M100 174c7 0 12-4 12-9" stroke="#1A1A1C" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+            <rect x="58" y="188" width="84" height="16" rx="8" fill="#1F4E7A"/>
+            <circle cx="100" cy="210" r="8" fill="#1F4E7A"/>
+            <circle cx="100" cy="210" r="3" fill="#EDE4D2"/>
+          </svg>
+          <span class="stamp">พบแล้ว<span>2 ต.ค. 2569 — 21:40</span></span>
+          <span class="cap"><span>ห้วยขวาง</span><span class="tab">1 ต.ค. 18:10</span></span>
+        </div>
+      </div>
+      <div>
+        <h3>ไข่เจียว<small>สุนัข · น้ำตาล · เพศผู้</small></h3>
+        <p class="marks">พันธุ์ผสม ขนสั้น อกขาว ใส่ปลอกคอฟ้ามีป้ายชื่อ ขาหลังซ้ายเดินกะเผลกเล็กน้อย</p>
+        <p class="where">พบที่ <b>ซอยอินทามระ 8 — คนในซอยเก็บไว้ให้</b></p>
+        <span class="status st-found">
+          <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm45.66,85.66-56,56a8,8,0,0,1-11.32,0l-24-24a8,8,0,0,1,11.32-11.32L112,148.69l50.34-50.35a8,8,0,0,1,11.32,11.32Z"/></svg>
+          พบแล้ว</span>
+        <p class="leads">ปิดประกาศแล้ว · ใช้เวลาตามหา 1 วัน 3 ชั่วโมง · 3 เบาะแส</p>
+      </div>
+      <div>
+        <span class="clock" style="color:var(--ink-3)"><b class="tab">27:30</b><span>ชั่วโมง:นาที จนได้กลับบ้าน</span></span>
+      </div>
+    </article>
+
+  </div>
+
+  <p class="sheet-label">หน้า 2 — รายละเอียดประกาศ · ฝั่งเจ้าของเห็นปุ่มปิดประกาศเพิ่ม</p>
+
+  <section class="detail">
+    <div class="frame">
+      <div class="shot">
+        <svg viewBox="0 0 200 250" role="img" aria-label="แมวขาว ตาสองสี ปลอกคอแดง ชื่อขาวมณี">
+          <rect width="200" height="250" fill="#EFE7D8"/>
+          <ellipse cx="100" cy="210" rx="72" ry="54" fill="#1A1A1C" opacity=".1"/>
+          <path d="M44 96 38 44l44 26z" fill="#1A1A1C" opacity=".92"/>
+          <path d="M156 96l6-52-44 26z" fill="#1A1A1C" opacity=".92"/>
+          <path d="M50 52l26 16-24 22z" fill="#8E2A22" opacity=".5"/>
+          <path d="M150 52l-26 16 24 22z" fill="#8E2A22" opacity=".5"/>
+          <ellipse cx="100" cy="126" rx="62" ry="56" fill="#1A1A1C" opacity=".9"/>
+          <ellipse cx="100" cy="126" rx="56" ry="50" fill="#FBF7EE"/>
+          <ellipse cx="78" cy="116" rx="11" ry="13" fill="#1A1A1C"/>
+          <ellipse cx="122" cy="116" rx="11" ry="13" fill="#1A1A1C"/>
+          <circle cx="81" cy="112" r="3.4" fill="#FBF7EE"/>
+          <circle cx="125" cy="112" r="3.4" fill="#FBF7EE"/>
+          <path d="M94 142h12l-6 7z" fill="#8E2A22"/>
+          <path d="M100 149v6M100 155c-5 0-9-3-9-7M100 155c5 0 9-3 9-7" stroke="#1A1A1C" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+          <path d="M40 128l-28-8M42 138l-28 2M160 128l28-8M158 138l28 2" stroke="#1A1A1C" stroke-width="1.8" opacity=".55"/>
+          <rect x="62" y="176" width="76" height="15" rx="7" fill="#8E2A22"/>
+          <circle cx="100" cy="196" r="7" fill="#8E2A22"/>
+        </svg>
+        <span class="cap"><span>รูปที่เจ้าของแนบไว้</span><span class="tab">3 ต.ค. 14:20</span></span>
+      </div>
+    </div>
+
+    <div>
+      <p class="eyebrow">ประกาศ KM-2410</p>
+      <h2>ขาวมณี</h2>
+      <span class="clock" style="margin-top:20px"><b class="tab">3:20</b><span>ชั่วโมง:นาที ที่หายไป — เห็นครั้งสุดท้าย 3 ต.ค. 14:20</span></span>
+
+      <dl class="dl">
+        <dt>ชนิด</dt><dd>แมว · ขาว · เพศเมีย · อายุ 3 ปี</dd>
+        <dt>ลักษณะเด่น</dt><dd>ตาสองสี หางด้วนครึ่งหนึ่ง ปลอกคอหนังแดงมีกระดิ่ง</dd>
+        <dt>บริเวณ</dt><dd>บางกะปิ — ปากซอยหมู่บ้าน ถนนนวมินทร์ 42</dd>
+        <dt>พฤติกรรม</dt><dd>ขี้กลัวคน เข้าใกล้เร็วจะวิ่งเข้าท่อ</dd>
+        <dt>สถานะ</dt><dd><span class="status st-lead" style="margin-top:2px">
+          <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M128,64a40,40,0,1,0,40,40A40,40,0,0,0,128,64Zm0,64a24,24,0,1,1,24-24A24,24,0,0,1,128,128Zm0-112a88.1,88.1,0,0,0-88,88c0,31.4,14.51,64.68,42,96.25a254.19,254.19,0,0,0,41.45,38.3,8,8,0,0,0,9.18,0A254.19,254.19,0,0,0,174,200.25c27.45-31.57,42-64.85,42-96.25A88.1,88.1,0,0,0,128,16Z"/></svg>
+          มีเบาะแส</span></dd>
+      </dl>
+
+      <div class="actions">
+        <button class="btn">
+          <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M128,64a40,40,0,1,0,40,40A40,40,0,0,0,128,64Zm0,64a24,24,0,1,1,24-24A24,24,0,0,1,128,128Zm0-112a88.1,88.1,0,0,0-88,88c0,31.4,14.51,64.68,42,96.25a254.19,254.19,0,0,0,41.45,38.3,8,8,0,0,0,9.18,0A254.19,254.19,0,0,0,174,200.25c27.45-31.57,42-64.85,42-96.25A88.1,88.1,0,0,0,128,16Z"/></svg>
+          ส่งเบาะแสที่พบ</button>
+        <button class="btn ghost">ปิดประกาศ — พบสัตว์แล้ว</button>
+      </div>
+
+      <div class="timeline">
+        <h3>เบาะแส 3 รายการ</h3>
+        <div class="ev">
+          <span class="when tab">40 นาที<br>ที่ผ่านมา</span>
+          <div>
+            <p class="who" style="margin:0">สมใจ<i>ปากซอย 5 หน้าร้านสะดวกซื้อ</i></p>
+            <p>เห็นเดินเข้าซอย 5 ตอนนี้ยังอยู่แถวนั้น ไม่ได้จับไว้เพราะกลัววิ่งหนี</p>
+            <div class="thumb"><svg viewBox="0 0 60 60" aria-label="รูปเบาะแสจากสมใจ"><rect width="60" height="60" fill="#E3DAC6"/><ellipse cx="30" cy="34" rx="16" ry="15" fill="#FBF7EE" stroke="#1A1A1C"/><path d="M17 24l-2-12 11 6zM43 24l2-12-11 6z" fill="#1A1A1C"/><circle cx="24" cy="32" r="3" fill="#1A1A1C"/><circle cx="36" cy="32" r="3" fill="#1A1A1C"/></svg></div>
+          </div>
+        </div>
+        <div class="ev">
+          <span class="when tab">2 ชม. 10 น.<br>ที่ผ่านมา</span>
+          <div>
+            <p class="who" style="margin:0">ธนกฤต<i>หลังตลาดนัด</i></p>
+            <p>เห็นแมวขาวหางด้วนนอนใต้รถกระบะ ไม่แน่ใจว่าตัวเดียวกันไหม ไม่ได้ถ่ายรูปทัน</p>
+          </div>
+        </div>
+        <div class="ev">
+          <span class="when tab">2 ชม. 48 น.<br>ที่ผ่านมา</span>
+          <div>
+            <p class="who" style="margin:0">อารยา<i>ปากซอยหมู่บ้าน</i></p>
+            <p>เห็นวิ่งข้ามถนนไปทางฝั่งตลาด ตอนนั้นประมาณห้าโมงเย็น</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <p class="sheet-label">หน้า 3 — ส่งเบาะแส ตอนเจ้าของเพิ่งปิดประกาศ (409) · ข้อความที่พิมพ์ไว้ยังอยู่ · ปุ่มเปลี่ยนข้อความ · มีทางไปต่อ</p>
+
+  <form class="form" onsubmit="return false">
+    <p class="eyebrow">ส่งเบาะแส</p>
+    <h2 style="font-size:30px;font-weight:700">ขาวมณี — แมวขาว หางด้วน</h2>
+
+    <div class="peek">
+      <div class="shot">
+        <svg viewBox="0 0 100 100" aria-label="แมวขาว ปลอกคอแดง ชื่อขาวมณี">
+          <rect width="100" height="100" fill="#EFE7D8"/>
+          <path d="M24 44 20 18l22 13zM76 44l4-26-22 13z" fill="#1A1A1C"/>
+          <ellipse cx="50" cy="56" rx="29" ry="26" fill="#FBF7EE" stroke="#1A1A1C" stroke-width="2"/>
+          <ellipse cx="40" cy="52" rx="5" ry="6" fill="#1A1A1C"/>
+          <ellipse cx="60" cy="52" rx="5" ry="6" fill="#1A1A1C"/>
+          <path d="M46 64h8l-4 5z" fill="#8E2A22"/>
+          <rect x="32" y="80" width="36" height="8" rx="4" fill="#8E2A22"/>
+        </svg>
+      </div>
+      <p><b>เทียบกับตัวที่คุณเห็นตรงหน้า:</b> แมวขาว ตาสองสี หางด้วนครึ่งหนึ่ง ปลอกคอหนังแดงมีกระดิ่ง<br>
+        <span style="color:var(--ink-3)">ถ้าไม่ตรงกัน อาจเป็นสัตว์ตัวอื่น — ดูประกาศอื่นในเขตนี้ได้</span></p>
+    </div>
+
+    <div class="alertbar" role="alert">
+      <svg viewBox="0 0 256 256" fill="var(--oxblood)" aria-hidden="true" style="width:24px;height:24px"><path d="M236.8,188.09,149.35,36.22a24,24,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM120,104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm8,88a12,12,0,1,1,12-12A12,12,0,0,1,128,192Z"/></svg>
+      <span><strong>เจ้าของพบสัตว์แล้ว ประกาศนี้ปิดรับเบาะแส</strong>
+        ข้อความที่คุณพิมพ์ยังอยู่ด้านล่าง ถ้าสัตว์ที่คุณเห็นไม่ใช่ตัวนี้
+        <a href="#">ดูประกาศอื่นในเขตบางกะปิ 6 ประกาศ →</a></span>
+    </div>
+
+    <div class="field">
+      <label for="ph">รูปที่ถ่ายได้</label>
+      <div class="drop" role="button" tabindex="0">
+        <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M208,56H180.28L166.65,35.56A8,8,0,0,0,160,32H96a8,8,0,0,0-6.65,3.56L75.71,56H48A24,24,0,0,0,24,80V192a24,24,0,0,0,24,24H208a24,24,0,0,0,24-24V80A24,24,0,0,0,208,56ZM128,176a40,40,0,1,1,40-40A40,40,0,0,1,128,176Z"/></svg>
+        <b>ถ่ายรูป หรือเลือกจากเครื่อง</b>
+        <span>PNG, JPEG หรือ WebP · ไม่เกิน 5 MB · รูปช่วยเจ้าของยืนยันได้มากที่สุด</span>
+      </div>
+    </div>
+
+    <div class="field bad">
+      <label for="d">เขตที่พบ <i>*</i></label>
+      <input id="d" class="inp" value="" aria-invalid="true" aria-describedby="d-err">
+      <span class="err" id="d-err">
+        <svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm-8,56a8,8,0,0,1,16,0v56a8,8,0,0,1-16,0Zm8,104a12,12,0,1,1,12-12A12,12,0,0,1,128,184Z"/></svg>
+        กรุณาระบุเขตที่พบ เพื่อให้เจ้าของรู้ว่าควรไปทางไหน</span>
+      <div class="sugg">
+        <button type="button">บางกะปิ</button>
+        <button type="button">ห้วยขวาง</button>
+        <button type="button">วังทองหลาง</button>
+        <button type="button">ลาดพร้าว</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="a">จุดสังเกต</label>
+      <input id="a" class="inp" value="หน้าร้านสะดวกซื้อ ปากซอยนวมินทร์ 46">
+      <span class="help">ยิ่งละเอียดยิ่งดี เช่น ชื่อร้าน ป้ายรถเมล์ เลขซอย</span>
+    </div>
+
+    <div class="field">
+      <label for="n">รายละเอียดที่พบ</label>
+      <textarea id="n" class="inp">เห็นเดินเข้าซอย 5 ตอนนี้ยังอยู่แถวนั้น ไม่ได้จับไว้เพราะกลัววิ่งหนี ถ้ามาเร็วน่าจะยังทัน</textarea>
+      <span class="counter tab">98 / 1000</span>
+    </div>
+
+    <button class="btn" disabled>ประกาศนี้ปิดรับเบาะแสแล้ว</button>
+  </form>
+
+  <p class="sheet-label" style="margin-bottom:60px">mock v2 · ทดสอบ dark mode ด้วยการสลับธีมของเครื่อง · ทุกสถานะอ่านได้โดยไม่ใช้สี</p>
+
+</div>
+</body>
+</html>
