@@ -12,6 +12,7 @@ from app.db import Base
 # before --autogenerate runs, or Alembic will emit drop_table for the missing ones
 from app.domain.auth import models as _auth_models  # noqa: F401
 from app.domain.pets import models as _pets_models  # noqa: F401
+from app.domain.reports import models as _reports_models  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
