@@ -8,6 +8,7 @@ from app.domain.pets.models import Pet
 from app.domain.pets.schemas import Species
 from app.domain.reports import service
 from app.domain.reports.schemas import ReportIn, ReportList, ReportOut, StatusFilter
+from app.domain.sightings import service as sightings_service
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
@@ -26,6 +27,7 @@ def create(payload: ReportIn, db: Session = Depends(get_session), user: User = D
     data = payload.model_dump()
     pet_id = data.pop("pet_id")
     report = service.create_report(db, user, pet_id, **data)
+    # ประกาศที่เพิ่งสร้างยังไม่มีเบาะแสแน่นอน จึงไม่ต้องยิง query นับ
     return _out(report, db.get(Pet, report.pet_id), 0)
 
 
@@ -38,13 +40,11 @@ def search(
     db: Session = Depends(get_session),
 ):
     rows = service.search(db, species=species, district=district, status=status, limit=limit)
-    # sighting_count is wired up in Task 5, when the sightings table exists
-    return ReportList(items=[_out(r, p, 0) for r, p in rows])
+    return ReportList(items=[_out(r, p, n) for r, p, n in rows])
 
 
 @router.get("/{report_id}", response_model=ReportOut)
 def detail(report_id: str, db: Session = Depends(get_session)):
     report = service.get_report_or_404(db, report_id)
     pet = db.get(Pet, report.pet_id)
-    # sighting_count is wired up in Task 5, when the sightings table exists
-    return _out(report, pet, 0)
+    return _out(report, pet, sightings_service.count_for_report(db, report.id))

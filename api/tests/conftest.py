@@ -1,5 +1,6 @@
 import os
 import uuid
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -49,3 +50,15 @@ def make_user(client):
         assert login.status_code == 200, login.text
         return {"client": c, "email": email, "id": r.json()["id"]}
     return _make
+
+
+@pytest.fixture
+def open_report(make_user):
+    owner = make_user()
+    pet = owner["client"].post("/api/pets", json={"name": "ขาวมณี", "species": "cat"}).json()
+    r = owner["client"].post("/api/reports", json={
+        "pet_id": pet["id"],
+        "last_seen_at": (datetime.now(UTC) - timedelta(hours=2)).isoformat(),
+        "district": "บางกะปิ"})
+    assert r.status_code == 201, r.text
+    return {**owner, "id": r.json()["id"]}

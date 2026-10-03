@@ -16,7 +16,9 @@ MAGIC = {
 }
 
 
-def _upload_dir() -> Path:
+def upload_dir() -> Path:
+    """โฟลเดอร์ปลายทาง — env ชนะ config เพื่อให้ test ชี้ไป tmp_path ได้
+    main.serve_upload ใช้ตัวเดียวกัน เขียนกับอ่านจึงไม่หลุดไปคนละที่"""
     path = Path(os.environ.get("UPLOAD_DIR") or get_settings().upload_dir)
     path.mkdir(parents=True, exist_ok=True)
     return path
@@ -37,5 +39,5 @@ def save_upload(file: UploadFile) -> str:
         _reject("ไฟล์นี้ไม่ใช่รูปภาพที่อ่านได้")   # content-type โกหกได้ จึงเช็ค magic bytes ด้วย
 
     key = f"{uuid.uuid4().hex}{ALLOWED[file.content_type]}"
-    (_upload_dir() / key).write_bytes(data)
+    (upload_dir() / key).write_bytes(data)
     return key

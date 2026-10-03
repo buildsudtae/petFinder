@@ -1,12 +1,13 @@
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.domain.auth.models import User
 from app.domain.pets.models import Pet
 from app.domain.pets.service import get_owned_pet
 from app.domain.reports.models import OPEN_STATUSES, SEARCHING, LostReport, ReportEvent
+from app.domain.sightings.models import Sighting
 from app.errors import AppError
 
 
@@ -36,7 +37,14 @@ def get_report_or_404(db: Session, report_id: str) -> LostReport:
 
 
 def search(db: Session, species=None, district=None, status=None, limit=20):
-    stmt = select(LostReport, Pet).join(Pet, Pet.id == LostReport.pet_id)
+    # correlated subquery — นับเบาะแสในคำสั่งเดียว ไม่ยิง N+1 ต่อประกาศ
+    sighting_count = (
+        select(func.count(Sighting.id))
+        .where(Sighting.report_id == LostReport.id)
+        .correlate(LostReport)
+        .scalar_subquery()
+    )
+    stmt = select(LostReport, Pet, sighting_count).join(Pet, Pet.id == LostReport.pet_id)
     stmt = stmt.where(LostReport.status == status) if status else stmt.where(LostReport.status.in_(OPEN_STATUSES))
     if species:
         stmt = stmt.where(Pet.species == species)
