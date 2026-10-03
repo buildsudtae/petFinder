@@ -6,6 +6,7 @@ from sqlalchemy import create_engine, text
 
 from app.config import DEFAULT_JWT_SECRET, get_settings
 from app.domain.auth.router import router as auth_router
+from app.domain.pets.router import router as pets_router
 from app.errors import install_error_handlers
 
 def assert_safe_secret() -> None:
@@ -27,6 +28,7 @@ app = FastAPI(
 )
 install_error_handlers(app)
 app.include_router(auth_router)
+app.include_router(pets_router)
 
 
 @app.get("/api/health")
