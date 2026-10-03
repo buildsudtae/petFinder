@@ -2,9 +2,12 @@ from functools import lru_cache
 from pydantic_settings import BaseSettings
 
 
+DEFAULT_JWT_SECRET = "dev-only-not-for-production"
+
+
 class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://pettech:pettech@db:5432/pettech"
-    jwt_secret: str = "dev-only-not-for-production"
+    jwt_secret: str = DEFAULT_JWT_SECRET
     rabbitmq_url: str = "amqp://pettech:pettech@rabbitmq:5672//"
     app_version: str = "0.0.0"
     git_commit: str = "unknown"

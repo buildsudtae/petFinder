@@ -1,6 +1,11 @@
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+logger = logging.getLogger(__name__)
 
 ALLOWED_CODES = {
     "REPORT_CLOSED": 409,
@@ -9,6 +14,7 @@ ALLOWED_CODES = {
     "NOT_FOUND": 404,
     "AUTH_REQUIRED": 401,
     "INVALID_TRANSITION": 409,
+    "INTERNAL": 500,
 }
 
 
@@ -21,6 +27,15 @@ class AppError(Exception):
         self.status = status or ALLOWED_CODES[code]
         self.field = field
         super().__init__(message_th)
+
+
+_HTTP_DEFAULT = ("VALIDATION", "คำขอไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง")
+_HTTP_MAP = {
+    404: ("NOT_FOUND", "ไม่พบข้อมูลหรือหน้าที่ต้องการ"),
+    405: ("VALIDATION", "ไม่รองรับวิธีการเรียกใช้งานนี้"),
+    401: ("AUTH_REQUIRED", "กรุณาเข้าสู่ระบบก่อนใช้งาน"),
+    403: ("FORBIDDEN", "คุณไม่มีสิทธิ์ทำรายการนี้"),
+}
 
 
 def install_error_handlers(app: FastAPI) -> None:
@@ -41,5 +56,25 @@ def install_error_handlers(app: FastAPI) -> None:
                 "code": "VALIDATION",
                 "message_th": "ข้อมูลที่กรอกไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง",
                 "field": str(loc[0]) if loc else None,
+            },
+        )
+
+    @app.exception_handler(StarletteHTTPException)
+    async def _http(_: Request, exc: StarletteHTTPException):
+        code, message = _HTTP_MAP.get(exc.status_code, _HTTP_DEFAULT)
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"code": code, "message_th": message, "field": None},
+        )
+
+    @app.exception_handler(Exception)
+    async def _unhandled(_: Request, exc: Exception):
+        logger.exception("unhandled exception", exc_info=exc)
+        return JSONResponse(
+            status_code=500,
+            content={
+                "code": "INTERNAL",
+                "message_th": "เกิดข้อผิดพลาดภายในระบบ กรุณาลองใหม่อีกครั้ง",
+                "field": None,
             },
         )
