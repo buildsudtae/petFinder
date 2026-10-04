@@ -26,7 +26,7 @@ def _clean():
     # later tasks add the other tables; only truncate those that exist so far
     existing = set(inspect(engine).get_table_names())
     with engine.begin() as conn:
-        for t in ("relay_messages", "relay_threads", "outbox", "report_events",
+        for t in ("notifications", "relay_messages", "relay_threads", "outbox", "report_events",
                   "sightings", "lost_reports", "pets", "users"):
             if t in existing:
                 conn.execute(text(f"truncate table {t} cascade"))

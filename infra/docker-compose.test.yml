@@ -23,10 +23,13 @@ services:
       DATABASE_URL: postgresql+psycopg://pettech:testpw@db:5432/pettech_test
       JWT_SECRET: test-secret
       UPLOAD_DIR: /data/uploads
+    volumes:
+      # worker code is not part of the api image; mount it so its tests share this DB
+      - ../worker:/srv/worker:ro
     depends_on:
       db:
         condition: service_healthy
-    command: ["python", "-m", "pytest", "-v", "tests/unit", "tests/integration"]
+    command: ["python", "-m", "pytest", "-v", "tests/unit", "tests/integration", "worker/tests"]
     networks: [pettest]
 
 networks:

@@ -56,15 +56,33 @@ def health():
     return {"status": "ok", "version": s.app_version, "commit": s.git_commit, "build": s.build_number}
 
 
+def _check_db(url: str) -> bool:
+    try:
+        engine = create_engine(url, pool_pre_ping=True)
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("select 1"))
+        finally:
+            engine.dispose()
+        return True
+    except Exception:
+        return False
+
+
+def _check_broker(url: str) -> bool:
+    import kombu
+    try:
+        with kombu.Connection(url, connect_timeout=1) as conn:
+            conn.connect()
+        return True
+    except Exception:
+        return False
+
+
 @app.get("/api/ready")
 def ready():
     s = get_settings()
-    db_ok = False
-    try:
-        engine = create_engine(s.database_url, pool_pre_ping=True)
-        with engine.connect() as conn:
-            conn.execute(text("select 1"))
-        db_ok = True
-    except Exception:
-        db_ok = False
-    return {"status": "ok" if db_ok else "degraded", "db": db_ok, "broker": True}
+    db_ok = _check_db(s.database_url)
+    broker_ok = _check_broker(s.rabbitmq_url)
+    # degraded ไม่ใช่ error: API ยังรับคำขอได้เมื่อ broker ล่ม งาน async ค้างใน outbox
+    return {"status": "ok" if db_ok and broker_ok else "degraded", "db": db_ok, "broker": broker_ok}

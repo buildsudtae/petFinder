@@ -53,6 +53,41 @@ services:
       traefik.http.services.api.loadbalancer.server.port: "8000"
     networks: [petnet]
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      RABBITMQ_DEFAULT_USER: pettech
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks: [petnet]
+
+  worker:
+    build:
+      context: ../worker
+      args:
+        IMAGE_TAG: ${IMAGE_TAG:-dev}
+    image: pettech-worker:${IMAGE_TAG:-dev}
+    environment:
+      DATABASE_URL: postgresql+psycopg://pettech:${POSTGRES_PASSWORD}@db:5432/pettech
+      RABBITMQ_URL: amqp://pettech:${RABBITMQ_PASSWORD}@rabbitmq:5672//
+      UPLOAD_DIR: /data/uploads
+    volumes:
+      - uploads:/data/uploads
+    # 1 replica เท่านั้น — celery worker + beat รันรวมใน container เดียว
+    # beat ที่รันซ้อนกันจะดูด outbox ซ้ำ (ห้ามเพิ่ม replicas / scale)
+    deploy:
+      replicas: 1
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks: [petnet]
+
   db:
     image: postgres:17
     environment:
