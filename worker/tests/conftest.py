@@ -12,7 +12,7 @@ from app.domain.sightings.models import Sighting
 
 # reuse the api suite's schema bootstrap and per-test truncate (autouse) so the
 # worker tests run against the same throwaway Postgres with a clean slate
-from tests.conftest import _clean, _schema  # noqa: F401
+from tests.conftest import _clean, _schema, client, make_user, open_report  # noqa: F401
 
 
 @pytest.fixture

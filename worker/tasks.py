@@ -22,13 +22,21 @@ log = logging.getLogger(__name__)
 THUMB_MAX = (480, 480)
 
 
-@celery.task(name="worker.tasks.handle_sighting_created", bind=True, max_retries=5)
-def handle_sighting_created(self, sighting_id: str) -> None:
+# a handler that raises is acked by acks_late and the outbox row is already published, so
+# without autoretry the work would be lost silently; handlers are idempotent so retries are safe
+RETRY = dict(autoretry_for=(Exception,), retry_backoff=True, retry_jitter=True, max_retries=5)
+
+
+@celery.task(name="worker.tasks.handle_sighting_created", **RETRY)
+def handle_sighting_created(sighting_id: str) -> None:
     with SessionLocal() as db:
         sighting = db.get(Sighting, uuid.UUID(sighting_id))
         if sighting is None:
             return                                  # เบาะแสถูกลบไปแล้ว — ไม่ใช่ error
         report = db.get(LostReport, sighting.report_id)
+        if report is None:
+            log.warning("sighting %s has no report; skipping", sighting_id)
+            return                                  # สถานะที่กู้ไม่ได้ — retry ก็ไม่ช่วย
 
         # idempotent: unique (user_id, dedupe_key) — ส่งซ้ำได้ แจ้งเตือนเดียว
         notify_once(db, report.owner_id, "sighting.created",
@@ -50,21 +58,21 @@ def handle_sighting_created(self, sighting_id: str) -> None:
                 db.commit()
 
 
-@celery.task(name="worker.tasks.handle_status_changed")
-def handle_status_changed(report_id: str, from_status: str, to_status: str) -> None:
+@celery.task(name="worker.tasks.handle_status_changed", **RETRY)
+def handle_status_changed(report_id: str, from_status: str, to_status: str, event_id: int) -> None:
     rid = uuid.UUID(report_id)
     with SessionLocal() as db:
         finders = list(db.scalars(select(RelayThread.finder_id).where(RelayThread.report_id == rid)))
         for finder_id in finders:
             # idempotent: unique (user_id, dedupe_key) ต่อผู้พบแต่ละคน
             notify_once(db, finder_id, "report.status_changed",
-                        dedupe_key=f"status:{report_id}:{to_status}",
+                        dedupe_key=f"status-event:{event_id}",
                         payload={"report_id": report_id, "from": from_status, "to": to_status})
 
 
 ROUTES = {
     "sighting.created": lambda p: handle_sighting_created.delay(p["sighting_id"]),
-    "report.status_changed": lambda p: handle_status_changed.delay(p["report_id"], p["from"], p["to"]),
+    "report.status_changed": lambda p: handle_status_changed.delay(p["report_id"], p["from"], p["to"], p["event_id"]),
 }
 
 

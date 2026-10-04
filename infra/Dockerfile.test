@@ -1,0 +1,14 @@
+# test image: build context is the repo root so api/ AND worker/ are baked in (no bind mounts;
+# a bind-mount source would resolve on the DinD daemon's filesystem, not the Jenkins workspace)
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+WORKDIR /srv
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY api/pyproject.toml ./
+RUN pip install --no-cache-dir -e '.[dev]'
+COPY api/ .
+COPY worker/ worker/
+RUN mkdir -p /data/uploads

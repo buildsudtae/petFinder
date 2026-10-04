@@ -106,9 +106,11 @@ def change_status(db: Session, report_id: str, user: User, to: str, reason: str 
         report.status = next_status_on_reopen(has_sightings)
         report.resolved_at = None
 
-    db.add(ReportEvent(report_id=rid, actor_id=user.id, from_status=previous,
-                       to_status=report.status, reason=clean_reason or None))
+    event = ReportEvent(report_id=rid, actor_id=user.id, from_status=previous,
+                        to_status=report.status, reason=clean_reason or None)
+    db.add(event)
+    db.flush()                                       # populate event.id for the notification dedupe key
     enqueue(db, "report.status_changed",
-            {"report_id": str(rid), "from": previous, "to": report.status})
+            {"report_id": str(rid), "from": previous, "to": report.status, "event_id": event.id})
     db.commit()
     return report

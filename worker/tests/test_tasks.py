@@ -40,7 +40,7 @@ def test_handle_status_changed_twice_notifies_each_finder_once(db_session, sight
     db_session.commit()
 
     for _ in range(2):
-        handle_status_changed(str(s.report_id), "SEARCHING", "RESOLVED")
+        handle_status_changed(str(s.report_id), "SEARCHING", "RESOLVED", 1)   # event เดียวกัน = ส่งซ้ำ
 
     assert db_session.scalar(select(func.count(Notification.id))) == 1
 
@@ -82,3 +82,69 @@ def test_worker_process_registers_every_model_it_touches():
             "[t for t in Base.metadata.sorted_tables]; print('ok')")
     out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
     assert out.returncode == 0, out.stderr
+
+
+def test_failing_handler_is_retried_until_it_succeeds(db_session, sighting_factory, monkeypatch):
+    import worker.tasks as tasks
+    s = sighting_factory()
+    real = tasks.notify_once
+    calls = []
+
+    def flaky(*a, **kw):
+        calls.append(1)
+        if len(calls) == 1:
+            raise RuntimeError("transient failure")
+        return real(*a, **kw)
+    monkeypatch.setattr(tasks, "notify_once", flaky)
+
+    # .apply() runs the task eagerly through the real retry machinery (a direct call would not retry)
+    result = tasks.handle_sighting_created.apply(args=[str(s.id)])
+
+    assert result.successful()
+    assert len(calls) == 2                        # ครั้งแรกพัง ถูก retry แล้วสำเร็จ
+    assert db_session.scalar(select(func.count(Notification.id))) == 1
+
+
+def test_handler_skips_sighting_whose_report_is_gone(db_session, sighting_factory):
+    import worker.tasks as tasks
+    s = sighting_factory()
+    from sqlalchemy import text
+    db_session.execute(text("set session_replication_role = replica"))   # ข้าม FK เพื่อจำลองแถวหาย
+    db_session.execute(text("delete from lost_reports"))
+    db_session.execute(text("set session_replication_role = origin"))
+    db_session.commit()
+    result = tasks.handle_sighting_created.apply(args=[str(s.id)])
+    assert result.successful()
+    assert db_session.scalar(select(func.count(Notification.id))) == 0
+
+
+def test_real_routes_pass_payload_keys_to_delay(monkeypatch):
+    import worker.tasks as tasks
+    seen = {}
+    monkeypatch.setattr(tasks.handle_sighting_created, "delay", lambda *a: seen.update(s=a))
+    monkeypatch.setattr(tasks.handle_status_changed, "delay", lambda *a: seen.update(c=a))
+
+    tasks.ROUTES["sighting.created"]({"sighting_id": "sid", "report_id": "rid"})
+    tasks.ROUTES["report.status_changed"](
+        {"report_id": "rid", "from": "SEARCHING", "to": "RESOLVED", "event_id": 7})
+
+    assert seen["s"] == ("sid",)
+    assert seen["c"] == ("rid", "SEARCHING", "RESOLVED", 7)
+
+
+def test_reopen_then_resolve_again_notifies_finder_twice(db_session, make_user, open_report, monkeypatch):
+    import worker.tasks as tasks
+    from app.domain.relay.models import RelayThread
+    finder = make_user()
+    db_session.add(RelayThread(report_id=open_report["id"], finder_id=finder["id"]))
+    db_session.commit()
+    c, rid = open_report["client"], open_report["id"]
+    for to in ("RESOLVED", "SEARCHING", "RESOLVED"):
+        assert c.patch(f"/api/reports/{rid}/status", json={"to": to, "reason": "เปลี่ยนสถานะ"}).status_code == 200
+    # run the real handlers synchronously for every outbox row the API wrote
+    monkeypatch.setattr(tasks.handle_status_changed, "delay", lambda *a: tasks.handle_status_changed(*a))
+
+    assert tasks.drain_outbox() == 3
+
+    rows = list(db_session.scalars(select(Notification).where(Notification.user_id == finder["id"])))
+    assert [r.payload["to"] for r in sorted(rows, key=lambda r: r.id)] == ["RESOLVED", "SEARCHING", "RESOLVED"]
