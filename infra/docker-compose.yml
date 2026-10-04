@@ -57,6 +57,19 @@ services:
       traefik.http.services.api.loadbalancer.server.port: "8000"
     networks: [petnet]
 
+  web:
+    build:
+      context: ../web
+    image: pettech-web:${IMAGE_TAG:-dev}
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: petnet
+      traefik.http.routers.web.entrypoints: web
+      traefik.http.routers.web.rule: PathPrefix(`/`)
+      traefik.http.routers.web.service: web
+      traefik.http.services.web.loadbalancer.server.port: "80"
+    networks: [petnet]
+
   rabbitmq:
     image: rabbitmq:3-management
     environment:

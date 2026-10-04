@@ -1,0 +1,32 @@
+@import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap');
+
+/* โทนอบอุ่นแบบ pet-care ตามไฟล์ Figma — แทนที่ palette ใน docs/design/ui-ux.md (กฎพฤติกรรมในเอกสารนั้นยังใช้ครบ) */
+:root {
+  --green-900: #133D26; --green-700: #1B6B3A; --green-500: #2F9E52; --green-100: #DCEFE0;
+  --cream-200: #F6E9BF; --cream-100: #FBF3DA; --page: #FFFDF7; --card: #FFFFFF;
+  --ink: #18271D; --ink-2: #4E5F54; --ink-3: #7E8D83; --on-dark: #FFFDF7;
+  --line-soft: #E8E2D1; --line-strong: #C9C2AC;
+  --status-searching: #C0411E; --status-searching-bg: #FBE7DE;
+  --status-lead: #A66A09;      --status-lead-bg: #FAEFD6;
+  --status-found: #1B6B3A;     --status-found-bg: #DCEFE0;
+  --radius-card: 28px; --radius-photo: 20px; --radius-pill: 999px; --radius-input: 16px;
+
+  --font-display: 'Anuphan', 'IBM Plex Sans Thai', system-ui, sans-serif;
+  --font-body: 'IBM Plex Sans Thai', system-ui, sans-serif;
+
+  --t-meta: 0.875rem;
+  --t-body: 1.0625rem;   /* 17px */
+  --t-h1: 2rem;
+  --t-h2: 1.5rem;
+  --t-h3: 1.25rem;
+  --t-clock: 3rem;
+  --lh-body: 1.75;       /* ตัวไทยมีสระบนล่าง ต้องการ line-height สูง */
+
+  --focus: var(--green-900);
+  --shadow-card: 0 2px 10px rgba(19, 61, 38, 0.07);
+  --motion: 180ms cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --motion: 1ms; }
+}
