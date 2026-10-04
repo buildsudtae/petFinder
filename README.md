@@ -41,6 +41,7 @@ git clone <URL-GITHUB-REPO-ของทีม> pettech && cd pettech
 ```bash
 cp .env.example .env && ./scripts/up.sh   # 1. start  — build + เปิดระบบ แล้วเข้า http://localhost:8000
 ./scripts/test.sh                         # 2. test   — unit + integration ใน container ชั่วคราว (DB แยก ลบทิ้งเมื่อจบ)
+(cd web && npm test)                      #    web    — เทสต์ฝั่งหน้าเว็บ (vitest); ใน pipeline คือ `docker build --target test ./web`
 ./scripts/smoke.sh                        # 3. smoke  — ไล่เส้นทางหลักบนระบบที่เปิดอยู่ ต้องจบด้วย "smoke test ผ่านทั้งหมด"
 ./scripts/race.sh                         # 4. race   — ยิงแข่งกันผ่าน Traefik ไปที่ api ทั้ง 2 replica
 ./scripts/down.sh                         # 5. stop   — หยุดระบบ (ใส่ -v ต่อท้ายเพื่อลบข้อมูล DB ด้วย)

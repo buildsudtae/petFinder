@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy import create_engine, text
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from app.config import DEFAULT_JWT_SECRET, get_settings
+from app.config import DEFAULT_JWT_SECRET, KNOWN_PUBLIC_SECRETS, PLACEHOLDER_JWT_SECRET, get_settings
 from app.domain.auth.router import router as auth_router
 from app.domain.pets.router import router as pets_router
 from app.domain.reports.router import router as reports_router
@@ -17,7 +17,13 @@ from app.errors import AppError, install_error_handlers
 from app.storage import upload_dir
 
 def assert_safe_secret() -> None:
-    if get_settings().jwt_secret == DEFAULT_JWT_SECRET and os.environ.get("PETTECH_ALLOW_DEV_SECRET") != "1":
+    secret = get_settings().jwt_secret
+    if secret == PLACEHOLDER_JWT_SECRET:
+        # the .env.example placeholder is published in the repo; no escape hatch
+        raise RuntimeError(
+            "JWT_SECRET is the placeholder from .env.example; generate one with `openssl rand -hex 32`"
+        )
+    if secret in KNOWN_PUBLIC_SECRETS and os.environ.get("PETTECH_ALLOW_DEV_SECRET") != "1":
         raise RuntimeError(
             "JWT_SECRET is unset or the public default; set a real secret "
             "(or PETTECH_ALLOW_DEV_SECRET=1 for local development only)"

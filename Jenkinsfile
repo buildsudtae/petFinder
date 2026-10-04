@@ -62,7 +62,10 @@ pipeline {
           sh '''
             $SSH_DEVTOOLS "SRC_DIR=$SRC_DIR IMAGE_TAG=$IMAGE_TAG COMMIT=$COMMIT BUILD_NUMBER=$BUILD_NUMBER bash -ex" <<'EOF'
               cd "$SRC_DIR"
-              cp .env.example .env
+              # .env ของ deployment: ค่าอื่นมาจาก .env.example แต่ JWT_SECRET สุ่มใหม่ทุก build
+              # (ค่า placeholder ใน repo เป็นความลับที่ใครก็อ่านได้ — api ปฏิเสธไม่ยอมบูต)
+              grep -v '^JWT_SECRET=' .env.example > .env
+              echo "JWT_SECRET=$(openssl rand -hex 32)" >> .env
               export APP_VERSION=0.1.0 GIT_COMMIT="$COMMIT" BUILD_NUMBER="$BUILD_NUMBER" IMAGE_TAG="$IMAGE_TAG"
               # worker image คือ FROM pettech-api — build api ก่อน (เหมือน scripts/up.sh) ไม่ให้ compose วิ่งไป pull
               docker compose --env-file .env -f infra/docker-compose.yml build api
@@ -80,6 +83,21 @@ pipeline {
             $SSH_DEVTOOLS "SRC_DIR=$SRC_DIR bash -ex" <<'EOF'
               cd "$SRC_DIR"
               ./scripts/test.sh </dev/null
+            EOF
+            '''.stripIndent()
+        }
+      }
+    }
+
+    stage('Web tests') {
+      // vitest รันตอน docker build --target test (ไม่ต้องมี node ใน course container, ไม่ต้อง bind mount)
+      // แดง = build ล้ม = ไม่ถึง Push/Deploy
+      steps {
+        sshagent(credentials: ['devtools-ssh']) {
+          sh '''
+            $SSH_DEVTOOLS "SRC_DIR=$SRC_DIR bash -ex" <<'EOF'
+              cd "$SRC_DIR"
+              docker build --target test -t pettech-web-test ./web </dev/null
             EOF
             '''.stripIndent()
         }
@@ -115,7 +133,7 @@ pipeline {
               docker compose --env-file .env -f infra/docker-compose.yml up -d
               # ตรวจ "status":"ok" ไม่ใช่แค่ HTTP 200: ก่อน api ลงทะเบียนกับ Traefik, /api/health ตกไปที่ web ซึ่งตอบ 200 เป็น HTML
               # </dev/null: ไม่ให้ docker exec กลืน stdin ซึ่งเป็นตัวสคริปต์ที่เหลือ
-              docker compose -f infra/docker-compose.yml exec -T api alembic upgrade head </dev/null
+              # migration รันโดย service `migrate` ใน compose (one-shot; api/worker รอ completed_successfully)
               ok=0
               for i in $(seq 1 30); do
                 if curl -fsS http://localhost:8000/api/health | grep -q '"status":"ok"'; then ok=1; break; fi

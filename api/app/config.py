@@ -3,6 +3,9 @@ from pydantic_settings import BaseSettings
 
 
 DEFAULT_JWT_SECRET = "dev-only-not-for-production"
+# the value shipped in .env.example: published in the repo, so as unusable as the dev default
+PLACEHOLDER_JWT_SECRET = "generate-with-openssl-rand-hex-32"
+KNOWN_PUBLIC_SECRETS = frozenset({DEFAULT_JWT_SECRET, PLACEHOLDER_JWT_SECRET})
 
 
 class Settings(BaseSettings):
