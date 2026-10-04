@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.engine import make_url
 
 from app.db import Base
 from app.main import app
@@ -12,8 +13,20 @@ from app.main import app
 DB_URL = os.environ["DATABASE_URL"]
 
 
+def _assert_test_database() -> None:
+    """Refuse to create_all/TRUNCATE anything but a database whose name ends in _test."""
+    name = make_url(DB_URL).database or ""
+    if not name.endswith("_test"):
+        raise RuntimeError(
+            f"refusing to run DB-mutating tests against database {name!r}: "
+            "the name must end in '_test' (this fixture TRUNCATEs every table). "
+            "Use ./scripts/test.sh; live-stack tests live in tests/concurrency (./scripts/race.sh)."
+        )
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _schema():
+    _assert_test_database()
     engine = create_engine(DB_URL)
     Base.metadata.create_all(engine)
     yield
@@ -22,6 +35,7 @@ def _schema():
 
 @pytest.fixture(autouse=True)
 def _clean():
+    _assert_test_database()
     engine = create_engine(DB_URL)
     # later tasks add the other tables; only truncate those that exist so far
     existing = set(inspect(engine).get_table_names())

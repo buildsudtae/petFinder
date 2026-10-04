@@ -97,4 +97,5 @@ def test_requests_actually_reached_both_api_replicas():
     with httpx.Client(base_url=BASE, timeout=10) as c:
         for _ in range(30):
             hostnames.add(c.get("/api/health").headers.get("x-served-by", ""))
+    assert "" not in hostnames, f"บางคำขอไม่มี x-served-by: {hostnames}"
     assert len(hostnames) >= 2, f"คำขอไปที่ replica เดียว: {hostnames}"
