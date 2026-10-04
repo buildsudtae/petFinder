@@ -28,10 +28,11 @@ export function ReportDetail() {
   const load = useCallback(async () => {
     setLoadError(null)
     try {
-      const [r, s, e] = await Promise.all([api.report(id), api.sightings(id), api.events(id)])
+      const [r, s] = await Promise.all([api.report(id), api.sightings(id)])
       setReport(r)
       setSightings(s)
-      setEvents(e)
+      // ประวัติสถานะ (มีเหตุผลที่เจ้าของพิมพ์) ขอเฉพาะเจ้าของ — คนอื่นได้ 403 จากเซิร์ฟเวอร์
+      setEvents(r.is_owner ? await api.events(id) : [])
     } catch (caught) {
       setLoadError(caught as ApiError)
     }
@@ -85,7 +86,8 @@ export function ReportDetail() {
           )}
         </div>
         <div><StatusPill status={report.status} /></div>
-        <ElapsedClock since={report.last_seen_at} until={resolvedAt} />
+        {/* ประกาศที่ปิดแล้วแต่ไม่รู้เวลาปิด (ผู้ชมที่ไม่ใช่เจ้าของไม่เห็น events) ห้ามให้นาฬิกาเดินต่อ */}
+        {!(resolved && !resolvedAt) && <ElapsedClock since={report.last_seen_at} until={resolvedAt} />}
         <p className="meta">เห็นครั้งสุดท้าย {dateTimeTh(report.last_seen_at)}</p>
 
         <h1>{report.pet_name}</h1>
@@ -145,9 +147,9 @@ export function ReportDetail() {
             <li key={s.id} className="timeline-item">
               <p className="meta"><strong>{agoTh(s.seen_at)}</strong> · {dateTimeTh(s.seen_at)}</p>
               <p>{s.finder_display_name} · {s.district}{s.area_note ? ` ${s.area_note}` : ''}</p>
-              {s.thumb_url && (
-                <a href={s.photo_url ?? s.thumb_url}>
-                  <img src={s.thumb_url} className="sighting-photo" loading="lazy"
+              {(s.thumb_url ?? s.photo_url) && (
+                <a href={s.photo_url ?? s.thumb_url ?? undefined}>
+                  <img src={(s.thumb_url ?? s.photo_url) as string} className="sighting-photo" loading="lazy"
                        alt={`ภาพที่ ${s.finder_display_name} ถ่ายไว้ที่${s.district}`} />
                 </a>
               )}
@@ -157,7 +159,7 @@ export function ReportDetail() {
         </ol>
       </section>
 
-      {events.length > 0 && (
+      {isOwner && events.length > 0 && (
         <section className="stack" aria-labelledby="events-h">
           <h2 id="events-h">ประวัติสถานะ</h2>
           <ul className="events">

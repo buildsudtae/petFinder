@@ -100,6 +100,7 @@ Auth = JWT ใน cookie `httpOnly; SameSite=Strict; Secure` (dev ปิด Secu
 | PATCH | `/api/reports/{id}/status` | owner | `{to: RESOLVED\|SEARCHING, reason}` |
 | POST | `/api/reports/{id}/sightings` | user | header `Idempotency-Key` บังคับ · multipart (รูป) |
 | GET | `/api/reports/{id}/sightings` | public | เรียง `created_at` |
+| GET | `/api/reports/{id}/events` | owner | ประวัติสถานะ + เหตุผล (ข้อความอิสระของเจ้าของ จึงไม่เปิดสาธารณะ) · 401 ไม่ login, 403 ไม่ใช่เจ้าของ |
 | POST | `/api/reports/{id}/messages` | owner หรือ finder ที่ส่งเบาะแสแล้ว | สร้าง thread ให้อัตโนมัติถ้ายังไม่มี |
 | GET | `/api/reports/{id}/messages` | participant | |
 | GET | `/api/health` | public | `{status, version, commit, build}` — มาจาก build arg `APP_VERSION/GIT_COMMIT/BUILD_NUMBER` ที่ pipeline ใส่ตอน `docker build` (ใช้ยืนยันว่า deploy ไปแล้วคือ commit ที่ test ผ่าน) |

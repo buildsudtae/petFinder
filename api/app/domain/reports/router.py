@@ -63,8 +63,11 @@ def change_status(report_id: str, payload: StatusIn, db: Session = Depends(get_s
 
 
 @router.get("/{report_id}/events", response_model=EventList)
-def events(report_id: str, db: Session = Depends(get_session)):
+def events(report_id: str, db: Session = Depends(get_session), user: User = Depends(current_user)):
+    # owner only: the reopen reason is free text and may name third parties (401 anonymous, 403 others)
     report = service.get_report_or_404(db, report_id)
+    if report.owner_id != user.id:
+        raise AppError("FORBIDDEN", "คุณไม่มีสิทธิ์ดูประวัติสถานะของประกาศนี้")
     rows = db.scalars(
         select(ReportEvent).where(ReportEvent.report_id == report.id).order_by(ReportEvent.id)
     )

@@ -76,3 +76,25 @@ def test_close_then_reopen_without_sightings_returns_to_searching_with_events(op
     assert [(e["from_status"], e["to_status"]) for e in events] == [
         (None, "SEARCHING"), ("SEARCHING", "RESOLVED"), ("RESOLVED", "SEARCHING")]
     assert events[-1]["reason"] == "ไม่ใช่ตัวของเรา"
+
+
+def test_events_owner_gets_200_with_reason(open_report):
+    rid = open_report["id"]
+    open_report["client"].patch(f"/api/reports/{rid}/status", json={"to": "RESOLVED", "reason": "เจอแล้ว"})
+    r = open_report["client"].get(f"/api/reports/{rid}/events")
+    assert r.status_code == 200
+    assert r.json()["items"][-1]["reason"] == "เจอแล้ว"
+
+
+def test_events_other_user_gets_403_and_no_reason_leaks(make_user, open_report):
+    rid = open_report["id"]
+    open_report["client"].patch(f"/api/reports/{rid}/status", json={"to": "RESOLVED", "reason": "ความลับของเจ้าของ"})
+    r = make_user()["client"].get(f"/api/reports/{rid}/events")
+    assert r.status_code == 403
+    assert r.json()["code"] == "FORBIDDEN"
+    assert "ความลับของเจ้าของ" not in r.text
+
+
+def test_events_anonymous_gets_401(client, open_report):
+    r = client.get(f"/api/reports/{open_report['id']}/events")
+    assert r.status_code == 401

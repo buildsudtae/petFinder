@@ -65,7 +65,7 @@ def test_closing_while_sighting_arrives_never_leaves_sighting_in_closed_report()
         # transaction flips the report back to HAS_LEAD after the owner already got 200, and
         # the event chain no longer links (each event must start where the previous ended).
         assert detail["status"] == "RESOLVED", f"เจ้าของปิดสำเร็จแล้วแต่สถานะคือ {detail['status']}"
-        events = httpx.get(f"{BASE}/api/reports/{rid}/events").json()["items"]
+        events = owner.get(f"/api/reports/{rid}/events").json()["items"]  # owner-only endpoint
         prev = None
         for e in events:
             if prev is not None:
