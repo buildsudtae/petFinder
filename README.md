@@ -2,6 +2,8 @@
 
 เว็บแอปสำหรับเจ้าของสัตว์เลี้ยงที่หายและผู้พบเห็น: เจ้าของประกาศตามหา, ผู้พบเห็นส่งเบาะแส (พร้อมรูปได้), ทั้งสองฝ่ายคุยกันผ่านระบบโดยไม่เห็นข้อมูลติดต่อของกัน
 
+> **Checklist ก่อนส่ง (ห้ามข้าม):** ☐ push repo ขึ้น GitHub แล้ว และแก้ `<URL-GITHUB-REPO-ของทีม>` ในหัวข้อ 1 เป็น URL จริง — ตอนนี้ README ยังใช้ตามไม่ได้จนกว่าจะทำข้อนี้
+
 เอกสารนี้เขียนให้ทำตามได้ทีละบรรทัด **ในกล่องของรายวิชา** โดยไม่ต้องเดาขั้นตอนใด
 
 ## 1. ข้อกำหนดเบื้องต้น
@@ -13,18 +15,25 @@
 | ทรัพยากร | พอสำหรับรัน 7 container พร้อมกัน (traefik, web, api x2, db, rabbitmq, worker) |
 | อินเทอร์เน็ต | ครั้งแรกต้อง pull image (`postgres:17`, `rabbitmq:3-management`, `traefik:v3.7.4`, base image ของ Python/Node) |
 
-กล่องต้องเริ่มด้วยสิทธิ์ที่ให้ Docker ทำงานข้างในได้ (`--privileged`) และ map พอร์ต `8000`, `8080` ออกมา ให้ใช้คำสั่งเดียวกับที่ lab ของรายวิชาใช้เริ่มกล่อง เช่น
+เริ่มกล่องด้วยคำสั่งนี้ (คำสั่งตาม reference ของรายวิชา `00_Tool/01_Reference/readme.md` บวกพอร์ตของระบบเรา):
 
 ```bash
-docker run -d --name devtools --privileged -p 8000:8000 -p 8080:8080 tuchsanai/devtools:2569_1
+docker run -d --name devtools --privileged -p 2222:22 -p 8000:8000 -p 8080:8080 tuchsanai/devtools:2569_1
 docker exec -it devtools bash
 ```
 
-เอาโค้ดนี้เข้าไปไว้ในกล่อง (อย่างใดอย่างหนึ่ง) แล้วเข้าไปในโฟลเดอร์โปรเจกต์ — ทุกคำสั่งด้านล่างรันจากโฟลเดอร์นี้:
+- `--privileged` **จำเป็น** สำหรับ Docker-in-Docker — ถ้าไม่ใส่ container จะหยุดทันที ดูเหตุผลด้วย `docker logs devtools`
+- `-p 2222:22` เปิด SSH ออกมาที่โฮสต์ (Jenkins ใช้ตอนต่อเข้ากล่อง) · `-p 8000:8000 -p 8080:8080` ให้เบราว์เซอร์บนโฮสต์เข้าระบบของเราได้
+- ไม่ต้องใส่ `-it` ตอน `docker run` เพราะ entrypoint รอ `dockerd` และถือ container ไว้ให้เอง
+- ทางเลือกกรณีไม่ใช้ `--privileged`: ตั้ง `START_DOCKERD=0` แล้ว mount docker socket ของโฮสต์เข้าไป (ดูรายละเอียดใน reference ของรายวิชา)
+
+เอาโค้ดนี้เข้าไปไว้ในกล่อง แล้วเข้าไปในโฟลเดอร์โปรเจกต์ — ทุกคำสั่งด้านล่างรันจากโฟลเดอร์นี้:
+
+> **ทีมต้องแก้ก่อนส่งงาน:** บรรทัด `git clone` ด้านล่างยังเป็นที่ว่าง เพราะยังไม่ได้สร้าง GitHub repository — ต้อง push โค้ดขึ้น GitHub แล้วแทนที่ `<URL-GITHUB-REPO-ของทีม>` ด้วย URL จริง ผู้ตรวจจะ clone โค้ดไม่ได้ถ้าไม่แก้
 
 ```bash
-git clone <URL ของ repo นี้> pettech && cd pettech
-# หรือ: docker cp ./pettech devtools:/workspace/pettech
+git clone <URL-GITHUB-REPO-ของทีม> pettech && cd pettech
+# หรือ (ถ้าโค้ดอยู่บนเครื่องโฮสต์): docker cp ./pettech devtools:/workspace/pettech
 ```
 
 ## 2. คำสั่ง 5 บรรทัด: start / test / smoke / race / stop

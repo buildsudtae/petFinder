@@ -63,19 +63,28 @@ if printf '%s' "$R" | grep -Eq '"(phone|email|address|line_id)"'; then
   fail "response สาธารณะมีข้อมูลติดต่อรั่ว: $R"
 fi
 
+say "ประกาศที่ยังเปิดอยู่ต้องอยู่ในรายการตามหา (ตัวควบคุมเชิงบวกของขั้นตรวจหลังปิด)"
+L=$(api "$BASE/api/reports")
+grep -q "$REPORT" <<<"$L" || fail "ประกาศที่ยังเปิดอยู่ไม่อยู่ในรายการ — เช็ค 'ไม่อยู่ในรายการ' หลังปิดจะไม่มีความหมาย"
+
 say "เจ้าของปิดประกาศ"
 P=$(printf '%s' '{"to":"RESOLVED","reason":"เจอแล้ว"}' | api -b "$JAR_OWNER" -X PATCH \
   "$BASE/api/reports/$REPORT/status" -H 'content-type: application/json' --data-binary @-)
 expect '"status":"RESOLVED"' "$P" "ปิดประกาศแล้วสถานะต้องเป็น RESOLVED: $P"
 
 say "เบาะแสหลังปิดต้องได้ 409"
-CODE=$(curl -s -o /dev/null -w '%{http_code}' -b "$JAR_FINDER" \
+RESP=$(curl -s -w '
+%{http_code}' -b "$JAR_FINDER" \
   -X POST "$BASE/api/reports/$REPORT/sightings" -H "Idempotency-Key: smoke-after-$STAMP" \
   -F "seen_at=$NOW" -F "district=<$TMP/district" -F "note=<$TMP/note2")
-[ "$CODE" = "409" ] || fail "คาดหวัง 409 แต่ได้ $CODE"
+CODE=${RESP##*$'
+'}; BODY409=${RESP%$'
+'*}
+[ "$CODE" = "409" ] || fail "คาดหวัง 409 แต่ได้ $CODE: $BODY409"
+grep -q '"code":"REPORT_CLOSED"' <<<"$BODY409" || fail "409 แต่ code ไม่ใช่ REPORT_CLOSED: $BODY409"
 
 say "ประกาศที่ปิดต้องไม่อยู่ในรายการตามหา"
 L=$(api "$BASE/api/reports")
-if printf '%s' "$L" | grep -q "$REPORT"; then fail "ประกาศที่ปิดยังโผล่ในรายการ"; fi
+if grep -q "$REPORT" <<<"$L"; then fail "ประกาศที่ปิดยังโผล่ในรายการ"; fi
 
 echo "smoke test ผ่านทั้งหมด"
