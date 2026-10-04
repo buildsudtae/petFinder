@@ -4,3 +4,4 @@ docs
 web
 **/__pycache__
 **/.pytest_cache
+!docs/traceability.md

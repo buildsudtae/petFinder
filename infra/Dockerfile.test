@@ -11,4 +11,5 @@ COPY api/pyproject.toml ./
 RUN pip install --no-cache-dir -e '.[dev]'
 COPY api/ .
 COPY worker/ worker/
+COPY docs/traceability.md docs/traceability.md
 RUN mkdir -p /data/uploads
