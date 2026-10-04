@@ -9,6 +9,7 @@ from app.config import DEFAULT_JWT_SECRET, get_settings
 from app.domain.auth.router import router as auth_router
 from app.domain.pets.router import router as pets_router
 from app.domain.reports.router import router as reports_router
+from app.domain.relay.router import router as relay_router
 from app.domain.sightings.router import router as sightings_router
 from app.errors import AppError, install_error_handlers
 from app.storage import upload_dir
@@ -35,6 +36,7 @@ app.include_router(auth_router)
 app.include_router(pets_router)
 app.include_router(reports_router)
 app.include_router(sightings_router)
+app.include_router(relay_router)
 
 
 @app.get("/api/uploads/{key}")

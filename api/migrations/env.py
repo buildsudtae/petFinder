@@ -13,6 +13,7 @@ from app.db import Base
 from app.domain.auth import models as _auth_models  # noqa: F401
 from app.domain.pets import models as _pets_models  # noqa: F401
 from app.domain.reports import models as _reports_models  # noqa: F401
+from app.domain.relay import models as _relay_models  # noqa: F401
 from app.domain.sightings import models as _sightings_models  # noqa: F401
 from app import outbox as _outbox_models  # noqa: F401
 
