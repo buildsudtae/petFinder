@@ -196,3 +196,47 @@ def test_uploads_rejects_path_traversal(client):
 
 def test_uploads_unknown_key_is_404(client):
     assert client.get("/api/uploads/deadbeef.png").status_code == 404
+
+
+# --- ไฟล์อัปโหลดต้องไม่ค้างเมื่อไม่ได้สร้างแถว ------------------------------------
+
+def _upload_files(tmp_path):
+    return sorted(p.name for p in tmp_path.iterdir())
+
+
+def test_resolved_report_409_leaves_no_upload(make_user, open_report, tmp_path, monkeypatch):
+    monkeypatch.setenv("UPLOAD_DIR", str(tmp_path))
+    _force_status(open_report["id"], "RESOLVED")
+    r = _post_sighting(make_user(), open_report["id"])
+    assert r.status_code == 409
+    assert _upload_files(tmp_path) == []
+
+
+def test_idempotent_replay_with_photo_leaves_no_new_upload(make_user, open_report, tmp_path, monkeypatch):
+    monkeypatch.setenv("UPLOAD_DIR", str(tmp_path))
+    finder = make_user()
+    first = _post_sighting(finder, open_report["id"], idem="rp-1")
+    assert first.status_code == 201
+    before = _upload_files(tmp_path)
+    assert len(before) == 1
+    second = _post_sighting(finder, open_report["id"], idem="rp-1")
+    assert second.status_code == 200
+    assert second.json()["id"] == first.json()["id"]
+    assert _upload_files(tmp_path) == before
+
+
+def test_unknown_report_404_leaves_no_upload(make_user, tmp_path, monkeypatch):
+    monkeypatch.setenv("UPLOAD_DIR", str(tmp_path))
+    r = _post_sighting(make_user(), "00000000-0000-0000-0000-000000000000")
+    assert r.status_code == 404
+    assert _upload_files(tmp_path) == []
+
+
+def test_overlong_idempotency_key_is_422(make_user, open_report):
+    r = _post_sighting(make_user(), open_report["id"], idem="k" * 101)
+    assert r.status_code == 422
+    assert r.json()["field"] == "Idempotency-Key"
+
+
+def test_idempotency_key_of_100_chars_is_accepted(make_user, open_report):
+    assert _post_sighting(make_user(), open_report["id"], idem="k" * 100).status_code == 201

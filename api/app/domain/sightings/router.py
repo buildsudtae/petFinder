@@ -12,7 +12,7 @@ from app.domain.sightings import service
 from app.domain.sightings.models import Sighting
 from app.domain.sightings.schemas import SightingList, SightingOut
 from app.errors import AppError
-from app.storage import save_upload
+from app.storage import delete_upload, save_upload
 
 router = APIRouter(prefix="/api/reports", tags=["sightings"])
 
@@ -44,6 +44,9 @@ def create(
         raise AppError("VALIDATION",
                        "คำขอนี้ต้องมี Idempotency-Key เพื่อกันการส่งเบาะแสซ้ำ",
                        field="Idempotency-Key")
+    if len(idempotency_key.strip()) > 100:       # คอลัมน์ idem_key เป็น String(100)
+        raise AppError("VALIDATION", "Idempotency-Key ต้องยาวไม่เกิน 100 ตัวอักษร",
+                       field="Idempotency-Key")
     if seen_at.tzinfo is None:
         seen_at = seen_at.replace(tzinfo=UTC)
     if seen_at > datetime.now(UTC):
@@ -51,12 +54,20 @@ def create(
     if not district.strip():
         raise AppError("VALIDATION", "กรุณาระบุเขตหรือบริเวณที่พบ", field="district")
 
-    photo_key = save_upload(photo) if photo is not None and photo.filename else None
-    sighting, created = service.add_sighting(
-        db, report_id, finder, idempotency_key.strip(), photo_key,
-        seen_at=seen_at, district=district.strip(),
-        area_note=(area_note or None), note=(note or None),
-    )
+    # ไฟล์ต้องมีอายุเท่าแถว: เก็บไว้เฉพาะเมื่อสร้าง sighting ใหม่สำเร็จ
+    # ทุกทางอื่น (404/409/422, replay 200, exception) ลบทิ้ง ไม่งั้น volume เต็มได้
+    photo_key = None
+    created = False
+    try:
+        photo_key = save_upload(photo) if photo is not None and photo.filename else None
+        sighting, created = service.add_sighting(
+            db, report_id, finder, idempotency_key.strip(), photo_key,
+            seen_at=seen_at, district=district.strip(),
+            area_note=(area_note or None), note=(note or None),
+        )
+    finally:
+        if photo_key is not None and not created:
+            delete_upload(photo_key)
     response.status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
     return _out(sighting, finder.display_name)
 

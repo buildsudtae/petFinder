@@ -22,6 +22,7 @@ def add_sighting(db: Session, report_id: str, finder: User, idem_key: str,
     # transaction เดียวกัน ไม่งั้นเจ้าของปิดประกาศพร้อมกันจะได้เบาะแสติดประกาศที่ปิดแล้ว
     report = db.execute(
         select(LostReport).where(LostReport.id == rid).with_for_update()
+        .execution_options(populate_existing=True)   # ห้ามได้สถานะเก่าจาก Session cache
     ).scalar_one_or_none()
     if report is None:
         raise AppError("NOT_FOUND", "ไม่พบประกาศที่ระบุ")
@@ -38,9 +39,16 @@ def add_sighting(db: Session, report_id: str, finder: User, idem_key: str,
     db.add(sighting)
     try:
         db.flush()
-    except IntegrityError:
+    except IntegrityError as e:
         # I2 — การส่งซ้ำด้วย Idempotency-Key เดิมชน uq_sightings_idem แล้วคืนแถวเดิม
         db.rollback()
+        # เป็น replay ก็ต่อเมื่อ 23505 บน uq_sightings_idem; ถ้า driver ไม่บอก (None) ใช้พฤติกรรมเดิม
+        sqlstate = getattr(e.orig, "sqlstate", None)
+        constraint = getattr(getattr(e.orig, "diag", None), "constraint_name", None)
+        if (sqlstate is not None and sqlstate != "23505") or (
+            constraint is not None and constraint != "uq_sightings_idem"
+        ):
+            raise
         existing = db.scalar(
             select(Sighting).where(
                 Sighting.report_id == rid,

@@ -45,3 +45,18 @@ def test_rejects_image_content_type_with_non_image_bytes(tmp_path, monkeypatch):
     assert e.value.code == "VALIDATION"
     assert e.value.field == "photo"
     assert list(tmp_path.iterdir()) == []
+
+
+def test_rejects_riff_container_that_is_not_webp(tmp_path, monkeypatch):
+    monkeypatch.setenv("UPLOAD_DIR", str(tmp_path))
+    wav = b"RIFF" + bytes(4) + b"WAVE" + bytes(64)
+    with pytest.raises(AppError) as e:
+        save_upload(_upload("a.webp", wav, "image/webp"))
+    assert e.value.field == "photo"
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_accepts_real_webp_header(tmp_path, monkeypatch):
+    monkeypatch.setenv("UPLOAD_DIR", str(tmp_path))
+    webp = b"RIFF" + bytes(4) + b"WEBP" + bytes(64)
+    assert save_upload(_upload("a.webp", webp, "image/webp")).endswith(".webp")

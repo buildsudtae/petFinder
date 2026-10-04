@@ -46,9 +46,10 @@ services:
       traefik.http.routers.api.entrypoints: web
       traefik.http.routers.api.rule: PathPrefix(`/api`)
       traefik.http.routers.api.service: api
-      traefik.http.routers.api.middlewares: api-rl@docker
+      traefik.http.routers.api.middlewares: api-rl@docker,api-body@docker
       traefik.http.middlewares.api-rl.ratelimit.average: "20"
       traefik.http.middlewares.api-rl.ratelimit.burst: "40"
+      traefik.http.middlewares.api-body.buffering.maxRequestBodyBytes: "6291456"
       traefik.http.services.api.loadbalancer.server.port: "8000"
     networks: [petnet]
 
