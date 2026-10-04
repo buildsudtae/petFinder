@@ -64,8 +64,10 @@ pipeline {
               cd "$SRC_DIR"
               # .env ของ deployment: ค่าอื่นมาจาก .env.example แต่ JWT_SECRET สุ่มใหม่ทุก build
               # (ค่า placeholder ใน repo เป็นความลับที่ใครก็อ่านได้ — api ปฏิเสธไม่ยอมบูต)
+              # ห้าม echo ค่า secret: bash -x จะพิมพ์ลง console ของ Jenkins — ใช้ pipe ให้ค่าไม่เคยอยู่ใน argv ที่ถูก trace
+              umask 077
               grep -v '^JWT_SECRET=' .env.example > .env
-              echo "JWT_SECRET=$(openssl rand -hex 32)" >> .env
+              openssl rand -hex 32 | sed 's/^/JWT_SECRET=/' >> .env
               export APP_VERSION=0.1.0 GIT_COMMIT="$COMMIT" BUILD_NUMBER="$BUILD_NUMBER" IMAGE_TAG="$IMAGE_TAG"
               # worker image คือ FROM pettech-api — build api ก่อน (เหมือน scripts/up.sh) ไม่ให้ compose วิ่งไป pull
               docker compose --env-file .env -f infra/docker-compose.yml build api
