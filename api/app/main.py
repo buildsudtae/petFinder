@@ -1,9 +1,11 @@
 import os
+import socket
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from sqlalchemy import create_engine, text
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import DEFAULT_JWT_SECRET, get_settings
 from app.domain.auth.router import router as auth_router
@@ -32,6 +34,20 @@ app = FastAPI(
     title="Lost Pet Finder API", docs_url="/api/docs", openapi_url="/api/openapi.json", lifespan=lifespan
 )
 install_error_handlers(app)
+
+HOSTNAME = socket.gethostname()
+
+
+class ServedByMiddleware(BaseHTTPMiddleware):
+    """Tell which replica answered, so tests through the load balancer can prove spread."""
+
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers["x-served-by"] = HOSTNAME
+        return response
+
+
+app.add_middleware(ServedByMiddleware)
 app.include_router(auth_router)
 app.include_router(pets_router)
 app.include_router(reports_router)

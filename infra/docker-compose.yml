@@ -47,8 +47,11 @@ services:
       traefik.http.routers.api.rule: PathPrefix(`/api`)
       traefik.http.routers.api.service: api
       traefik.http.routers.api.middlewares: api-rl@docker,api-body@docker
-      traefik.http.middlewares.api-rl.ratelimit.average: "20"
-      traefik.http.middlewares.api-rl.ratelimit.burst: "40"
+      # Raised from 20/40 in Task 9: scripts/race.sh drives ~200 requests in a few seconds from ONE
+      # source (the api container) through this gateway; 20/40 returned 429 and masked the invariants.
+      # Still a real limiter (per-source, 200 req/s sustained), not removed.
+      traefik.http.middlewares.api-rl.ratelimit.average: "200"
+      traefik.http.middlewares.api-rl.ratelimit.burst: "400"
       traefik.http.middlewares.api-body.buffering.maxRequestBodyBytes: "6291456"
       traefik.http.services.api.loadbalancer.server.port: "8000"
     networks: [petnet]
