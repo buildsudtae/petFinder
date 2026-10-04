@@ -6,7 +6,6 @@ import { api, type Message } from '../api/endpoints'
 import { useAuth } from '../auth'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { Field } from '../components/Field'
-import { myReportIds } from '../lib/mine'
 import { dateTimeTh } from '../lib/time'
 import { useFormError } from '../lib/useFormError'
 
@@ -17,6 +16,7 @@ export function Relay() {
   const { id = '' } = useParams()
   const { user } = useAuth()
   const [messages, setMessages] = useState<Message[] | null>(null)
+  const [isOwner, setIsOwner] = useState(false)
   const [loadError, setLoadError] = useState<ApiError | null>(null)
   const [body, setBody] = useState('')
   const [busy, setBusy] = useState(false)
@@ -27,13 +27,16 @@ export function Relay() {
 
   const load = useCallback(async () => {
     setLoadError(null)
-    try { setMessages(await api.messages(id)) } catch (e) { setLoadError(e as ApiError); setMessages([]) }
+    try {
+      const [msgs, report] = await Promise.all([api.messages(id), api.report(id)])
+      setMessages(msgs)
+      setIsOwner(report.is_owner)
+    } catch (e) { setLoadError(e as ApiError); setMessages([]) }
   }, [id])
 
   useEffect(() => { void load() }, [load])
 
   const me = user?.display_name ?? ''
-  const isOwner = !!user && myReportIds(user.id).includes(id)
   const others = new Set((messages ?? []).map((m) => m.sender_display_name).filter((n) => n !== me))
 
   async function send(e: React.FormEvent) {

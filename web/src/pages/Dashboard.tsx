@@ -3,29 +3,24 @@ import { Link } from 'react-router-dom'
 
 import type { ApiError } from '../api/client'
 import { api, type Report } from '../api/endpoints'
-import { useAuth } from '../auth'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { ReportCard } from '../components/ReportCard'
-import { myReportIds } from '../lib/mine'
 
-/**
- * ประกาศของฉัน — API ยังไม่มี endpoint "ของฉัน" และ ReportOut ไม่มี owner_id
- * จึงแสดงประกาศที่สร้างจากเบราว์เซอร์นี้ (จำรหัสไว้ใน localStorage ต่อผู้ใช้)
- */
+/** ประกาศของฉัน — GET /api/reports?mine=true (ทุกสถานะ) ตามบัญชีที่ล็อกอิน ไม่ขึ้นกับเบราว์เซอร์/อุปกรณ์ */
 export function Dashboard() {
-  const { user } = useAuth()
   const [reports, setReports] = useState<Report[] | null>(null)
   const [error, setError] = useState<ApiError | null>(null)
 
   const load = useCallback(async () => {
-    if (!user) return
     setError(null)
     setReports(null)
-    const results = await Promise.allSettled(myReportIds(user.id).map((id) => api.report(id)))
-    setReports(results.flatMap((r) => (r.status === 'fulfilled' ? [r.value] : [])))
-    const failed = results.find((r) => r.status === 'rejected' && (r.reason as ApiError).code !== 'NOT_FOUND')
-    if (failed && failed.status === 'rejected') setError(failed.reason as ApiError)
-  }, [user])
+    try {
+      setReports(await api.reports({ mine: true, limit: 100 }))
+    } catch (e) {
+      setError(e as ApiError)
+      setReports([])
+    }
+  }, [])
 
   useEffect(() => { void load() }, [load])
 
@@ -37,7 +32,7 @@ export function Dashboard() {
       </div>
       <ErrorBanner error={error} onRetry={load} />
       {reports === null && <p className="loading" role="status">กำลังโหลด…</p>}
-      {reports?.length === 0 && (
+      {reports?.length === 0 && !error && (
         <div className="card empty">
           <p>คุณยังไม่มีประกาศ — ถ้าสัตว์เลี้ยงหาย แจ้งได้ที่นี่</p>
           <Link to="/reports/new" className="btn btn-primary">แจ้งสัตว์หาย</Link>

@@ -40,6 +40,7 @@ class ReportOut(BaseModel):
     area_note: str | None
     description: str | None
     sighting_count: int
+    is_owner: bool = False   # about the caller only; owner_id is never exposed
     created_at: datetime
 
 

@@ -3,11 +3,9 @@ import { useNavigate } from 'react-router-dom'
 
 import type { ApiError } from '../api/client'
 import { api, type Pet, type Species } from '../api/endpoints'
-import { useAuth } from '../auth'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { Field } from '../components/Field'
 import { DISTRICTS, SPECIES_TH } from '../lib/labels'
-import { rememberReport } from '../lib/mine'
 import { toLocalInput } from '../lib/time'
 import { useFormError } from '../lib/useFormError'
 
@@ -16,7 +14,6 @@ const FIELDS = ['pet_id', 'name', 'species', 'color', 'marks', 'last_seen_at', '
 
 /** หน้าเดียว ไม่ทำ wizard: สัตว์ตัวไหน -> หายเมื่อไหร่ที่ไหน -> ลักษณะเด่น */
 export function NewReport() {
-  const { user } = useAuth()
   const navigate = useNavigate()
   const [pets, setPets] = useState<Pet[] | null>(null)
   const [petId, setPetId] = useState('')
@@ -59,7 +56,6 @@ export function NewReport() {
         area_note: areaNote || null,
         description: description || null,
       })
-      if (user) rememberReport(user.id, report.id)
       navigate(`/reports/${report.id}`)
     } catch (caught) {
       setError(caught as ApiError)

@@ -9,7 +9,6 @@ import { ErrorBanner } from '../components/ErrorBanner'
 import { Field } from '../components/Field'
 import { StatusPill } from '../components/StatusPill'
 import { SPECIES_TH, STATUS_TH } from '../lib/labels'
-import { myReportIds } from '../lib/mine'
 import { agoTh, dateTimeTh } from '../lib/time'
 import { useFormError } from '../lib/useFormError'
 
@@ -50,11 +49,9 @@ export function ReportDetail() {
   }
   if (!report) return <p className="loading" role="status">กำลังโหลด…</p>
 
-  // API ไม่ส่ง owner_id: รู้ได้เฉพาะประกาศที่สร้างจากเบราว์เซอร์นี้ (เซิร์ฟเวอร์ตรวจสิทธิ์จริงเสมอ)
-  const isOwner = !!user && myReportIds(user.id).includes(report.id)
+  const isOwner = report.is_owner   // มาจากเซิร์ฟเวอร์ (คุกกี้ของผู้เรียก) ไม่ใช่ที่เก็บในเบราว์เซอร์
   const resolved = report.status === 'RESOLVED'
   const resolvedAt = resolved ? [...events].reverse().find((e) => e.to_status === 'RESOLVED')?.created_at ?? null : null
-  const hasSighted = !!user && sightings.some((s) => s.finder_display_name === user.display_name)
   const timeline = [...sightings].reverse()   // ใหม่สุดอยู่บนสุด
 
   async function change(to: 'RESOLVED' | 'SEARCHING') {
@@ -103,7 +100,7 @@ export function ReportDetail() {
         {!isOwner && resolved && (
           <button type="button" className="btn btn-primary" disabled>ประกาศนี้ปิดรับเบาะแสแล้ว</button>
         )}
-        {user && (isOwner || hasSighted) && (
+        {user && (
           <Link to={`/reports/${report.id}/messages`} className="btn btn-secondary">
             {isOwner ? 'คุยกับผู้พบเห็น' : 'คุยกับเจ้าของ'}
           </Link>

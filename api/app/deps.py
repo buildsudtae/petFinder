@@ -14,3 +14,10 @@ def current_user(request: Request, db: Session = Depends(get_session)) -> User:
     if user is None:
         raise AppError("AUTH_REQUIRED", "กรุณาเข้าสู่ระบบก่อนใช้งาน")
     return user
+
+
+def optional_user(request: Request, db: Session = Depends(get_session)) -> User | None:
+    """เหมือน current_user แต่คืน None เมื่อไม่มี/คุกกี้เสีย/หมดอายุ — ใช้กับ endpoint สาธารณะที่ปรับผลตามผู้เรียก"""
+    token = request.cookies.get(COOKIE_NAME)
+    user_id = read_token(token) if token else None
+    return db.get(User, user_id) if user_id else None

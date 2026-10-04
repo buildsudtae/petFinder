@@ -17,6 +17,7 @@ export interface Report {
   area_note: string | null
   description: string | null
   sighting_count: number
+  is_owner: boolean
   created_at: string
 }
 export interface Sighting {
@@ -53,7 +54,7 @@ export const api = {
   createReport: (b: {
     pet_id: string; last_seen_at: string; district: string; area_note: string | null; description: string | null
   }) => request<Report>('/api/reports', jsonInit('POST', b)),
-  reports: (q: { species?: string; district?: string; status?: string; limit?: number }) => {
+  reports: (q: { species?: string; district?: string; status?: string; limit?: number; mine?: boolean }) => {
     const p = new URLSearchParams()
     for (const [k, v] of Object.entries(q)) if (v) p.set(k, String(v))
     return request<{ items: Report[] }>(`/api/reports?${p}`).then((r) => r.items)

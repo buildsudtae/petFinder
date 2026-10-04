@@ -40,7 +40,7 @@ def get_report_or_404(db: Session, report_id: str) -> LostReport:
     return report
 
 
-def search(db: Session, species=None, district=None, status=None, limit=20):
+def search(db: Session, species=None, district=None, status=None, limit=20, owner_id=None):
     # correlated subquery — นับเบาะแสในคำสั่งเดียว ไม่ยิง N+1 ต่อประกาศ
     sighting_count = (
         select(func.count(Sighting.id))
@@ -49,7 +49,12 @@ def search(db: Session, species=None, district=None, status=None, limit=20):
         .scalar_subquery()
     )
     stmt = select(LostReport, Pet, sighting_count).join(Pet, Pet.id == LostReport.pet_id)
-    stmt = stmt.where(LostReport.status == status) if status else stmt.where(LostReport.status.in_(OPEN_STATUSES))
+    if status:
+        stmt = stmt.where(LostReport.status == status)
+    elif owner_id is None:                       # ของตัวเอง (mine) เห็นทุกสถานะ รวมที่ปิดแล้ว
+        stmt = stmt.where(LostReport.status.in_(OPEN_STATUSES))
+    if owner_id is not None:
+        stmt = stmt.where(LostReport.owner_id == owner_id)
     if species:
         stmt = stmt.where(Pet.species == species)
     if district:
