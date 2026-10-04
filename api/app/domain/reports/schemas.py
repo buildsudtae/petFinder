@@ -49,3 +49,19 @@ class ReportList(BaseModel):
 
 
 StatusFilter = Literal["SEARCHING", "HAS_LEAD", "RESOLVED"]
+
+
+class StatusIn(BaseModel):
+    to: Literal["RESOLVED", "SEARCHING", "HAS_LEAD"]
+    reason: str | None = Field(default=None, max_length=300)
+
+
+class EventOut(BaseModel):
+    from_status: str | None
+    to_status: str
+    reason: str | None
+    created_at: datetime
+
+
+class EventList(BaseModel):
+    items: list[EventOut]

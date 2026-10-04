@@ -46,7 +46,6 @@ def test_blank_district_and_overlong_description_are_rejected(make_user):   # Re
     assert _mk_report(u, description="ก" * 5000).status_code == 422
 
 
-@pytest.mark.xfail(reason="status endpoint อยู่ Task 6", strict=True)
 def test_list_hides_resolved_reports_by_default(make_user, client):
     u = make_user()
     rid = _mk_report(u).json()["id"]

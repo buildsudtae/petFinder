@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import get_session
@@ -7,7 +8,10 @@ from app.domain.auth.models import User
 from app.domain.pets.models import Pet
 from app.domain.pets.schemas import Species
 from app.domain.reports import service
-from app.domain.reports.schemas import ReportIn, ReportList, ReportOut, StatusFilter
+from app.domain.reports.models import ReportEvent
+from app.domain.reports.schemas import (
+    EventList, EventOut, ReportIn, ReportList, ReportOut, StatusFilter, StatusIn,
+)
 from app.domain.sightings import service as sightings_service
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
@@ -41,6 +45,24 @@ def search(
 ):
     rows = service.search(db, species=species, district=district, status=status, limit=limit)
     return ReportList(items=[_out(r, p, n) for r, p, n in rows])
+
+
+@router.patch("/{report_id}/status", response_model=ReportOut)
+def change_status(report_id: str, payload: StatusIn, db: Session = Depends(get_session),
+                  user: User = Depends(current_user)):
+    report = service.change_status(db, report_id, user, payload.to, payload.reason)
+    pet = db.get(Pet, report.pet_id)
+    return _out(report, pet, sightings_service.count_for_report(db, report.id))
+
+
+@router.get("/{report_id}/events", response_model=EventList)
+def events(report_id: str, db: Session = Depends(get_session)):
+    report = service.get_report_or_404(db, report_id)
+    rows = db.scalars(
+        select(ReportEvent).where(ReportEvent.report_id == report.id).order_by(ReportEvent.id)
+    )
+    return EventList(items=[EventOut(from_status=e.from_status, to_status=e.to_status,
+                                     reason=e.reason, created_at=e.created_at) for e in rows])
 
 
 @router.get("/{report_id}", response_model=ReportOut)
