@@ -27,7 +27,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: ["python", "-m", "pytest", "-v", "tests/unit", "tests/integration", "worker/tests"]
+    # apply the real migrations first (the I1/I2 constraints live there), then pytest; a migration that
+    # drifts from the models or fails to apply breaks the build
+    command: ["sh", "-c", "alembic upgrade head && python -m pytest -v tests/unit tests/integration worker/tests"]
     networks: [pettest]
 
 networks:
