@@ -1,10 +1,12 @@
 import importlib
 import pkgutil
+import re
 import sys
 
 from pydantic import BaseModel
 
-FORBIDDEN_FIELDS = {"phone", "mobile", "tel", "address", "line_id", "email", "password", "password_hash"}
+# substring match, case-insensitive: catches phone_number, contact_info, line_id, user_email, ...
+FORBIDDEN_RE = re.compile(r"phone|tel|mobile|line|address|email|contact|password", re.IGNORECASE)
 
 
 def _all_response_models():
@@ -18,20 +20,33 @@ def _all_response_models():
     return found
 
 
-def test_no_response_schema_exposes_contact_information():
+def test_no_non_request_schema_exposes_contact_information():
+    # every pydantic model under app.domain except request bodies (names ending in "In")
     offenders = [
         (m.__name__, f)
         for m in _all_response_models()
+        if not m.__name__.endswith("In")
         for f in m.model_fields
-        if f.lower() in FORBIDDEN_FIELDS and m.__name__.endswith("Out")
+        if FORBIDDEN_RE.search(f)
     ]
     assert offenders == [], f"schema เปิดเผยข้อมูลติดต่อ: {offenders}"
 
 
-def test_user_table_has_no_contact_columns():
-    from app.domain.auth.models import User
-    cols = {c.name.lower() for c in User.__table__.columns}
-    assert cols & (FORBIDDEN_FIELDS - {"email", "password_hash"}) == set()
+# the only contact-shaped columns allowed anywhere: login credentials on users
+ALLOWED_COLUMNS = {("users", "email"), ("users", "password_hash")}
+
+
+def test_no_table_has_contact_columns():
+    import app.domain  # noqa: F401
+    _all_response_models()                       # ensure every model module is imported
+    from app.db import Base
+    offenders = [
+        (t.name, c.name)
+        for t in Base.metadata.tables.values()
+        for c in t.columns
+        if FORBIDDEN_RE.search(c.name) and (t.name, c.name) not in ALLOWED_COLUMNS
+    ]
+    assert offenders == [], f"ตารางมีคอลัมน์ข้อมูลติดต่อ: {offenders}"
 
 
 def test_privacy_walk_imports_every_domain_module_on_disk():
