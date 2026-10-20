@@ -1,0 +1,147 @@
+name: pettech
+
+services:
+  traefik:
+    image: traefik:v3.7.4
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedByDefault=false
+      - --api.insecure=true
+      - --entrypoints.web.address=:80
+    ports:
+      - "8000:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [petnet]
+
+  api:
+    build:
+      context: ../api
+      args:
+        APP_VERSION: ${APP_VERSION:-0.0.0}
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
+        BUILD_NUMBER: ${BUILD_NUMBER:-0}
+    image: pettech-api:${IMAGE_TAG:-dev}
+    environment:
+      DATABASE_URL: postgresql+psycopg://pettech:${POSTGRES_PASSWORD}@db:5432/pettech
+      JWT_SECRET: ${JWT_SECRET}
+      RABBITMQ_URL: amqp://pettech:${RABBITMQ_PASSWORD}@rabbitmq:5672//
+      UPLOAD_DIR: /data/uploads
+    volumes:
+      - uploads:/data/uploads
+    deploy:
+      replicas: 2
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/api/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: petnet
+      traefik.http.routers.api.entrypoints: web
+      traefik.http.routers.api.rule: PathPrefix(`/api`)
+      traefik.http.routers.api.service: api
+      traefik.http.routers.api.middlewares: api-rl@docker,api-body@docker
+      # Per-source cap: 60 req/s sustained, burst 120 (was 20/40 before Task 9).
+      # 60/120 is the lowest value that clears scripts/race.sh, which fires ~200 requests in a few
+      # seconds from one source (the api container); 20/40 returned 429 and masked the invariants.
+      # Do not raise further without re-measuring: this is the spam control for sighting posts.
+      traefik.http.middlewares.api-rl.ratelimit.average: "60"
+      traefik.http.middlewares.api-rl.ratelimit.burst: "120"
+      traefik.http.middlewares.api-body.buffering.maxRequestBodyBytes: "6291456"
+      traefik.http.services.api.loadbalancer.server.port: "8000"
+    networks: [petnet]
+
+  # one-shot: apply the schema once, before any api replica or the worker starts (no race between replicas)
+  migrate:
+    image: pettech-api:${IMAGE_TAG:-dev}
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://pettech:${POSTGRES_PASSWORD}@db:5432/pettech
+      # config loads Settings(); the secret is irrelevant to alembic but must not be the public default
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+    networks: [petnet]
+
+  web:
+    build:
+      context: ../web
+    image: pettech-web:${IMAGE_TAG:-dev}
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: petnet
+      traefik.http.routers.web.entrypoints: web
+      traefik.http.routers.web.rule: PathPrefix(`/`)
+      traefik.http.routers.web.service: web
+      traefik.http.services.web.loadbalancer.server.port: "80"
+    networks: [petnet]
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      RABBITMQ_DEFAULT_USER: pettech
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks: [petnet]
+
+  worker:
+    build:
+      context: ../worker
+      args:
+        IMAGE_TAG: ${IMAGE_TAG:-dev}
+    image: pettech-worker:${IMAGE_TAG:-dev}
+    environment:
+      DATABASE_URL: postgresql+psycopg://pettech:${POSTGRES_PASSWORD}@db:5432/pettech
+      RABBITMQ_URL: amqp://pettech:${RABBITMQ_PASSWORD}@rabbitmq:5672//
+      UPLOAD_DIR: /data/uploads
+    volumes:
+      - uploads:/data/uploads
+    # 1 replica เท่านั้น — celery worker + beat รันรวมใน container เดียว
+    # beat ที่รันซ้อนกันจะดูด outbox ซ้ำ (ห้ามเพิ่ม replicas / scale)
+    deploy:
+      replicas: 1
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+    networks: [petnet]
+
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: pettech
+      POSTGRES_USER: pettech
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pettech -d pettech"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [petnet]
+
+volumes:
+  pgdata:
+  uploads:
+
+networks:
+  petnet:
+    name: petnet
