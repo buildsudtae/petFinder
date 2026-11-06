@@ -174,3 +174,38 @@ def test_resolved_at_is_set_on_close_and_cleared_on_reopen(make_user, client):
     assert client.get(f"/api/reports/{rid}").json()["resolved_at"] is not None
     u["client"].patch(f"/api/reports/{rid}/status", json={"to": "SEARCHING", "reason": "ปิดผิดตัว"})
     assert client.get(f"/api/reports/{rid}").json()["resolved_at"] is None
+
+
+# ── บริเวณที่หายโดยประมาณ (D9 แก้ 2026-11-06: ยึดความเป็นส่วนตัว) ─────────────
+def test_area_is_rounded_to_about_100m_and_shown_only_on_the_detail(make_user, client):
+    rid = _mk_report(make_user(), area_lat=13.804567, area_lng=100.607891).json()["id"]
+    body = client.get(f"/api/reports/{rid}").json()
+    assert (body["area_lat"], body["area_lng"]) == (13.805, 100.608)   # ค่าละเอียดไม่ถูกเก็บเลย
+    item = client.get("/api/reports").json()["items"][0]
+    assert "area_lat" not in item and "area_lng" not in item          # รายการไม่มีพิกัด
+
+
+def test_area_is_optional(make_user, client):
+    rid = _mk_report(make_user()).json()["id"]
+    body = client.get(f"/api/reports/{rid}").json()
+    assert body["area_lat"] is None and body["area_lng"] is None
+
+
+@pytest.mark.parametrize("over, field", [
+    ({"area_lat": 18.79, "area_lng": 98.98}, "area_lat"),     # เชียงใหม่ — นอกกรอบ กทม.
+    ({"area_lat": 13.80}, "area_lng"),                        # ส่งมาแค่ค่าเดียว
+    ({"area_lng": 100.6}, "area_lng"),
+])
+def test_area_outside_bangkok_or_half_a_pair_is_rejected(make_user, over, field):
+    r = _mk_report(make_user(), **over)
+    assert r.status_code == 422
+    assert r.json()["field"] == field
+
+
+def test_area_is_deleted_when_found_and_not_restored_on_reopen(make_user, client):
+    u = make_user()
+    rid = _mk_report(u, area_lat=13.8045, area_lng=100.6078).json()["id"]
+    closed = u["client"].patch(f"/api/reports/{rid}/status", json={"to": "RESOLVED"}).json()
+    assert closed["area_lat"] is None and closed["area_lng"] is None
+    u["client"].patch(f"/api/reports/{rid}/status", json={"to": "SEARCHING", "reason": "ปิดผิดตัว"})
+    assert client.get(f"/api/reports/{rid}").json()["area_lat"] is None

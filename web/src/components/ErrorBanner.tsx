@@ -6,7 +6,7 @@ export function ErrorBanner({ error, onRetry }: { error: ApiError | null; onRetr
     <div role="alert" className="error-banner">
       <span data-testid="error-icon" aria-hidden="true">⚠</span>
       <span>{error.messageTh}</span>
-      {onRetry && <button type="button" onClick={onRetry}>ลองอีกครั้ง</button>}
+      {onRetry && <button type="button" className="btn btn-line" onClick={onRetry}>ลองอีกครั้ง</button>}
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Index, String, Text, func
+from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Index, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -34,6 +34,10 @@ class LostReport(Base):
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     district: Mapped[str] = mapped_column(String(80), nullable=False)
     area_note: Mapped[str | None] = mapped_column(String(200))
+    # บริเวณที่หายโดยประมาณ (ไม่บังคับ): ทศนิยม 3 ตำแหน่ง ≈ 100 ม. ค่าที่ละเอียดกว่านี้ไม่ถูกเก็บเลย
+    # ลบทิ้งเมื่อปิดประกาศว่าพบแล้ว — ดู schemas.ReportIn และ service.change_status
+    area_lat: Mapped[float | None] = mapped_column(Numeric(6, 3, asdecimal=False))
+    area_lng: Mapped[float | None] = mapped_column(Numeric(6, 3, asdecimal=False))
     description: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

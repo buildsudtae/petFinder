@@ -1,17 +1,26 @@
-// เวลาที่หายไป: ชั่วโมง:นาที (ตัวใหญ่) + ประโยคไทยสำหรับ screen reader
+// เวลาที่หายไป: ตัวเลขใหญ่ + ประโยคไทยสำหรับ screen reader
 
-export interface Elapsed { hours: number; minutes: number; text: string }
+export interface Elapsed { days: number; hours: number; minutes: number; seconds: number; text: string }
 
 export function elapsedBetween(fromIso: string, toMs: number): Elapsed {
-  const total = Math.max(0, Math.floor((toMs - new Date(fromIso).getTime()) / 60000))
-  const hours = Math.floor(total / 60)
-  const minutes = total % 60
-  const days = Math.floor(hours / 24)
+  const totalSec = Math.max(0, Math.floor((toMs - new Date(fromIso).getTime()) / 1000))
+  const days = Math.floor(totalSec / 86400)
+  const hours = Math.floor((totalSec % 86400) / 3600)
+  const minutes = Math.floor((totalSec % 3600) / 60)
+  const seconds = totalSec % 60
   const parts: string[] = []
   if (days > 0) parts.push(`${days} วัน`)
-  if (hours % 24 > 0 || days === 0) parts.push(`${hours % 24} ชั่วโมง`)
+  if (hours > 0 || days === 0) parts.push(`${hours} ชั่วโมง`)
   parts.push(`${minutes} นาที`)
-  return { hours, minutes, text: parts.join(' ') }
+  return { days, hours, minutes, seconds, text: parts.join(' ') }
+}
+
+/** สองหน่วยที่ใหญ่ที่สุด สำหรับการ์ด: [["3","ชม."],["20","น."]] */
+export function elapsedParts(fromIso: string, toMs = Date.now()): [string, string][] {
+  const e = elapsedBetween(fromIso, toMs)
+  if (e.days > 0) return [[String(e.days), 'วัน'], [String(e.hours), 'ชม.']]
+  if (e.hours > 0) return [[String(e.hours), 'ชม.'], [String(e.minutes), 'น.']]
+  return [[String(e.minutes), 'นาที']]
 }
 
 export function agoTh(iso: string, nowMs = Date.now()): string {
@@ -25,6 +34,14 @@ export function agoTh(iso: string, nowMs = Date.now()): string {
 
 export function dateTimeTh(iso: string): string {
   return new Date(iso).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })
+}
+
+export function dateTh(iso: string): string {
+  return new Date(iso).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })
+}
+
+export function timeTh(iso: string): string {
+  return new Date(iso).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
 }
 
 /** ค่าสำหรับ <input type="datetime-local"> ในเวลาท้องถิ่น */

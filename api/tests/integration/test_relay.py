@@ -81,7 +81,8 @@ def test_message_response_has_no_ids_or_contact_fields(make_user, open_report):
     finder = make_user()
     _post_sighting(finder, open_report["id"], idem="p1")
     body = _send(finder, open_report["id"]).json()
-    assert set(body) == {"id", "sender_display_name", "body", "created_at"}
+    assert set(body) == {"id", "sender_display_name", "body", "created_at", "mine"}   # mine เป็น bool ไม่ใช่ id
+    assert body["mine"] is True
     assert finder["email"] not in str(body) and finder["id"] not in str(body)
 
 
@@ -256,3 +257,15 @@ def test_unread_count_counts_the_other_side_and_clears_after_read(make_user, ope
     open_report["client"].post(f"/api/reports/{rid}/messages", json={"body": "กำลังไปครับ", "thread_id": tid})
     assert owner_unread() == 0
     assert _threads(f1, rid).json()["items"][0]["unread_count"] == 1
+
+
+def test_mine_flag_marks_only_the_callers_own_messages_even_with_same_display_name(make_user, open_report):
+    # ชื่อที่แสดงซ้ำกันได้ — หน้าเว็บต้องรู้ว่าข้อความไหนเป็นของตัวเองจาก mine ไม่ใช่จากชื่อ
+    finder = make_user(display_name="ผู้ใช้ทดสอบ")          # ชื่อเดียวกับเจ้าของใน fixture
+    _post_sighting(finder, open_report["id"], idem="mine-1")
+    _send(finder, open_report["id"], body="จากผู้พบ")
+    _send(open_report, open_report["id"], body="จากเจ้าของ")
+    owner_view = {m["body"]: m["mine"] for m in open_report["client"].get(f"/api/reports/{open_report['id']}/messages").json()["items"]}
+    finder_view = {m["body"]: m["mine"] for m in finder["client"].get(f"/api/reports/{open_report['id']}/messages").json()["items"]}
+    assert owner_view == {"จากผู้พบ": False, "จากเจ้าของ": True}
+    assert finder_view == {"จากผู้พบ": True, "จากเจ้าของ": False}

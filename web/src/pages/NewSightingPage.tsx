@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import type { ApiError } from '../api/client'
 import { api, type Report } from '../api/endpoints'
 import { ErrorBanner } from '../components/ErrorBanner'
+import { PetPhoto } from '../components/PetPhoto'
 import { StatusPill } from '../components/StatusPill'
 import { SPECIES_TH } from '../lib/labels'
 import { NewSighting } from './NewSighting'
@@ -18,23 +19,29 @@ export function NewSightingPage() {
   useEffect(() => { api.report(id).then(setReport, setError) }, [id])
 
   return (
-    <section className="stack">
+    <section className="stack form-page">
       <Link to={`/reports/${id}`} className="back">← ยกเลิก</Link>
-      <h1>ส่งเบาะแส{report ? `: ${report.pet_name}` : ''}</h1>
+      <h1 style={{ fontSize: '1.875rem' }}>ส่งเบาะแส</h1>
       <ErrorBanner error={error} />
       {report && (
-        <div className="card brief-strip">
-          <p><strong>{SPECIES_TH[report.species]}{report.color ? ` ${report.color}` : ''}</strong>{report.marks ? ` · ${report.marks}` : ''}</p>
-          <p className="meta">{report.district}{report.area_note ? ` — ${report.area_note}` : ''}</p>
-          <StatusPill status={report.status} />
+        <div className="card row" style={{ flexWrap: 'nowrap', padding: 12 }}>
+          <PetPhoto url={report.photo_url} species={report.species} alt={`รูป${report.pet_name}`} className="pet-thumb" />
+          <div style={{ minWidth: 0 }}>
+            <p><strong>{report.pet_name}</strong> · {SPECIES_TH[report.species]}{report.color ? ` ${report.color}` : ''}</p>
+            <p className="meta ellipsis">{report.marks ? `${report.marks} · ` : ''}หายที่{report.district}</p>
+          </div>
+          <span style={{ marginLeft: 'auto' }}><StatusPill status={report.status} /></span>
         </div>
       )}
-      <NewSighting
-        key={id}   // ฟอร์ม/Idempotency-Key ต้องเป็นของประกาศนี้เท่านั้น
-        reportId={id}
-        onSent={() => navigate(`/reports/${id}`)}
-        onAuthRequired={() => navigate('/login', { state: { from: `/reports/${id}/sighting` } })}
-      />
+      {report && (
+        <NewSighting
+          key={id}   // ฟอร์ม/Idempotency-Key ต้องเป็นของประกาศนี้เท่านั้น
+          reportId={id}
+          defaultDistrict={report.district}
+          onSent={() => navigate(`/reports/${id}`, { state: { flash: 'ส่งเบาะแสแล้ว เจ้าของจะเห็นในรายการเบาะแส' } })}
+          onAuthRequired={() => navigate('/login', { state: { from: `/reports/${id}/sighting` } })}
+        />
+      )}
     </section>
   )
 }

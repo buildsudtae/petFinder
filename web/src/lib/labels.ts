@@ -15,3 +15,11 @@ export const DISTRICTS = [
   'บางคอแหลม', 'ประเวศ', 'คลองเตย', 'สวนหลวง', 'จอมทอง', 'ดอนเมือง', 'ราชเทวี', 'ลาดพร้าว', 'วัฒนา', 'บางแค',
   'หลักสี่', 'สายไหม', 'คันนายาว', 'สะพานสูง', 'วังทองหลาง', 'คลองสามวา', 'บางนา', 'ทวีวัฒนา', 'ทุ่งครุ', 'บางบอน',
 ]
+
+export const DISTRICTS_SORTED = [...DISTRICTS].sort((a, b) => a.localeCompare(b, 'th'))
+
+/** อักษรย่อในวงกลมของผู้ใช้ — ตัด "คุณ" นำหน้า และเก็บสระหน้า (เ แ โ ใ ไ) ไว้กับพยัญชนะตัวถัดไป */
+export function initialOf(name: string): string {
+  const n = name.trim().replace(/^คุณ\s*/, '') || name.trim()
+  return /^[เแโใไ]/.test(n) ? n.slice(0, 2) : n.slice(0, 1)
+}

@@ -2,37 +2,46 @@ import { Link } from 'react-router-dom'
 
 import type { Report } from '../api/endpoints'
 import { SPECIES_TH } from '../lib/labels'
-import { dateTimeTh } from '../lib/time'
-import { ElapsedClock } from './ElapsedClock'
+import { dateTh, elapsedParts } from '../lib/time'
+import { PinIcon } from './Icons'
+import { PetPhoto } from './PetPhoto'
 import { StatusPill } from './StatusPill'
 
-/** ประกาศหนึ่งแถว: เวลาที่หายไปใหญ่สุด, สถานะ = icon + ข้อความ + รูปกรอบ, ประกาศที่พบแล้วมีตราประทับทับ */
-export function ReportCard({ report: r }: { report: Report }) {
-  const resolved = r.status === 'RESOLVED'
+/**
+ * การ์ดประกาศของหน้าแรก: เขตที่หายตัวใหญ่ (สิ่งที่คนผ่านมาเทียบได้ทันที) ·
+ * เวลาที่หายไปเป็นตัวเลขใหญ่มุมขวาล่าง · ประกาศที่พบแล้วมีตราประทับทับรูป
+ */
+export function ReportCard({ report: r, featured = false }: { report: Report; featured?: boolean }) {
+  const found = r.status === 'RESOLVED'
+  const parts = found ? null : elapsedParts(r.last_seen_at)
+  const desc = [SPECIES_TH[r.species], r.color, r.marks].filter(Boolean).join(' · ')
   return (
-    <li className={`card report-card status-${r.status}`}>
-      <Link to={`/reports/${r.id}`} className="report-link">
-        <div className="tile" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="44" height="44" focusable="false">
-            <ellipse cx="12" cy="16" rx="5.500" ry="4.500" fill="currentColor" />
-            <circle cx="5" cy="10" r="2.200" fill="currentColor" />
-            <circle cx="9.500" cy="5.500" r="2.200" fill="currentColor" />
-            <circle cx="14.500" cy="5.500" r="2.200" fill="currentColor" />
-            <circle cx="19" cy="10" r="2.200" fill="currentColor" />
-          </svg>
-          <span>{SPECIES_TH[r.species]}</span>
-          {resolved && <span className="stamp">พบแล้ว</span>}
+    <li className={featured ? 'feat-li' : undefined}>
+      <Link to={`/reports/${r.id}`} className={`rcard${featured ? ' feat' : ''}${found ? ' found' : ''}`}>
+        <div className="photo-box on-photo">
+          <PetPhoto url={r.photo_url} species={r.species} alt={`${r.pet_name} ${desc}`} />
+          <StatusPill status={r.status} count={r.status === 'HAS_LEAD' ? r.sighting_count : undefined} />
+          {found && <span className="stamp" aria-hidden="true">พบแล้ว</span>}
         </div>
-        <div className="report-body">
-          {resolved
-            ? <p className="meta">เห็นครั้งสุดท้าย {dateTimeTh(r.last_seen_at)}</p>
-            : <ElapsedClock since={r.last_seen_at} />}
-          <h3 className="report-name">{r.pet_name}</h3>
-          <p className="meta">{SPECIES_TH[r.species]}{r.color ? ` · ${r.color}` : ''}</p>
-          <p className="meta">{r.district}{r.area_note ? ` — ${r.area_note}` : ''}</p>
-          <div className="row">
-            <StatusPill status={r.status} />
-            {r.sighting_count > 0 && <span className="count">{r.sighting_count} เบาะแส</span>}
+        <div className="rbody">
+          <div style={{ minWidth: 0 }}>
+            <span className="place-label"><PinIcon />{found ? 'หายที่เขต' : 'หายแถวเขต'}</span>
+            <p className="place">{r.district}</p>
+            {r.area_note && <p className="meta ellipsis">{r.area_note}</p>}
+          </div>
+          <div className="rfoot">
+            <div>
+              <h3>{r.pet_name}</h3>
+              <p className="meta">{desc}</p>
+            </div>
+            <div className="time">
+              <span className="caption">{found ? 'พบแล้วเมื่อ' : 'หายไปแล้ว'}</span>
+              <span className="time-v">
+                {parts
+                  ? parts.map(([n, u]) => <span key={u}><span className="num">{n}</span> <span className="unit">{u}</span></span>)
+                  : <span className="num" style={{ fontSize: '1.125rem' }}>{r.resolved_at ? dateTh(r.resolved_at) : '—'}</span>}
+              </span>
+            </div>
           </div>
         </div>
       </Link>
