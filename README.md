@@ -1,8 +1,10 @@
-# ตามหา (Lost Pet Finder)
+# La peace (Lost Pet Finder)
 
 เว็บแอปสำหรับเจ้าของสัตว์เลี้ยงที่หายและผู้พบเห็น: เจ้าของประกาศตามหา, ผู้พบเห็นส่งเบาะแส (พร้อมรูปได้), ทั้งสองฝ่ายคุยกันผ่านระบบโดยไม่เห็นข้อมูลติดต่อของกัน
 
 เอกสารนี้เขียนให้ทำตามได้ทีละบรรทัด **ในกล่องของรายวิชา** โดยไม่ต้องเดาขั้นตอนใด
+
+แผนภาพสถาปัตยกรรมและพฤติกรรมเมื่อแต่ละส่วนล่ม: [`docs/architecture.md`](docs/architecture.md) · Requirement → หลักฐาน: [`docs/traceability.md`](docs/traceability.md)
 
 ## 1. ข้อกำหนดเบื้องต้น
 
@@ -11,7 +13,7 @@
 | กล่องรายวิชา | image `tuchsanai/devtools:2569_1` (Docker-in-Docker) — มี `docker`, `docker compose`, `git`, `curl`, `bash` อยู่แล้ว |
 | พอร์ตที่ต้องเปิดออกจากกล่อง | `8000` และ `8080` เท่านั้น (ดูตารางข้อ 3) |
 | ทรัพยากร | พอสำหรับรัน 7 container พร้อมกัน (traefik, web, api x2, db, rabbitmq, worker) |
-| อินเทอร์เน็ต | ครั้งแรกต้อง pull image (`postgres:17`, `rabbitmq:3-management`, `traefik:v3.7.4`, base image ของ Python/Node) |
+| อินเทอร์เน็ต | ครั้งแรกต้อง pull image (`postgres:17`, `rabbitmq:3-management`, `traefik:v3.7.4`, base image ของ Python/Node) · ตอนใช้งาน ภาพถนนบนแผนที่ดึงจาก OpenStreetMap ผ่าน nginx ของเรา (ไม่มีเน็ตแล้วภาพถนนว่าง แต่ระบบและขอบเขตเขตยังทำงาน) |
 
 เริ่มกล่องด้วยคำสั่งนี้ (คำสั่งตาม reference ของรายวิชา `00_Tool/01_Reference/readme.md` บวกพอร์ตของระบบเรา):
 
@@ -40,6 +42,7 @@ cp .env.example .env && ./scripts/up.sh   # 1. start  — build + เปิด�
 (cd web && npm test)                      #    web    — เทสต์ฝั่งหน้าเว็บ (vitest); ใน pipeline คือ `docker build --target test ./web`
 ./scripts/smoke.sh                        # 3. smoke  — ไล่เส้นทางหลักบนระบบที่เปิดอยู่ ต้องจบด้วย "smoke test ผ่านทั้งหมด"
 ./scripts/race.sh                         # 4. race   — ยิงแข่งกันผ่าน Traefik ไปที่ api ทั้ง 2 replica
+./scripts/degraded.sh                     #    C5     — หยุด broker+worker แล้วส่งเบาะแส ต้องได้ 201 และแจ้งเตือนตามมาเมื่อเปิดคืน
 ./scripts/down.sh                         # 5. stop   — หยุดระบบ (ใส่ -v ต่อท้ายเพื่อลบข้อมูล DB ด้วย)
 ```
 
@@ -77,7 +80,7 @@ Jenkins ไม่ build เอง — มัน SSH เข้ากล่อง�
 
 - Jenkins ต้องเรียก `ssh root@devtools` ได้ (ชื่อโฮสต์ `devtools` ต้องแก้ได้จากเครื่อง Jenkins — ถ้าชื่อต่างจากนี้ ให้แก้ `SSH_DEVTOOLS` ที่หัว `Jenkinsfile`)
 - สร้าง Pipeline job แบบ *Pipeline script from SCM* ชี้ที่ repo นี้ และเปิด trigger `GitHub hook trigger for GITScm polling` พร้อมตั้ง webhook ที่ GitHub (`<jenkins>/github-webhook/`)
-- ลำดับ stage: Connect → Secrets → Ship source → Build → Test → Push → Deploy → Verify. **Test แดง = ไม่ Push ไม่ Deploy** (stage ถัดไปไม่ทำงาน)
+- ลำดับ stage: Connect → Secrets → Ship source → Build → Test → Web tests → Push → Deploy → Verify. **Test แดง = ไม่ Push ไม่ Deploy** (stage ถัดไปไม่ทำงาน)
 - Verify ตรวจว่า `/api/health` ของที่ deploy มี `commit` ตรงกับ commit ที่เพิ่งผ่านเทสต์ แล้วรัน `smoke.sh` และ `race.sh` ซ้ำกับระบบที่ deploy จริง
 - `.env` ห้าม commit: stage Secrets ล้ม build ถ้า `.env` ถูก track ใน git (commit เฉพาะ `.env.example`)
 
@@ -93,7 +96,7 @@ Jenkins ไม่ build เอง — มัน SSH เข้ากล่อง�
 | **C2** Authorization | เฉพาะเจ้าของประกาศเปลี่ยนสถานะได้ ข้ามเจ้าของ = 403 โดยไม่หลุดข้อมูล, ไม่ล็อกอิน = 401 | `T tests/integration/test_status.py -k "non_owner or anonymous"` | `2 passed` |
 | **C3** Privacy | response สาธารณะและตาราง `users` ไม่มี phone/email/address/line_id | `T tests/unit/test_privacy.py` และ `./scripts/smoke.sh` ขั้น "ข้อมูลสาธารณะต้องไม่มีข้อมูลติดต่อ" | `passed` ทุกข้อ · smoke ผ่านขั้นนั้น |
 | **C4** Idempotency | ส่งเบาะแสซ้ำด้วย `Idempotency-Key` เดิม (กดซ้ำ/เน็ตกระตุก) ต้องได้แถวเดียว | `./scripts/race.sh` (ยิง 10 คำขอเหมือนกันพร้อมกัน: `test_ten_parallel_identical_sightings_create_exactly_one_row`) และ `T tests/integration/test_sightings.py -k idempotency_key` | `passed` |
-| **C5** Degraded mode | worker/broker ตาย → สร้างประกาศและส่งเบาะแสยังได้ แจ้งเตือนตามมาทีหลัง (ผ่านตาราง outbox) | `T tests/integration/test_outbox.py` | `passed` (รวม `test_api_still_accepts_sighting_when_broker_is_unreachable`) |
+| **C5** Degraded mode | worker/broker ตาย → สร้างประกาศและส่งเบาะแสยังได้ แจ้งเตือนตามมาทีหลัง (ผ่านตาราง outbox) | `T tests/integration/test_outbox.py` และ `./scripts/degraded.sh` (หยุด rabbitmq+worker บนระบบที่รันจริง) | `passed` (รวม `test_api_still_accepts_sighting_when_broker_is_unreachable`) · degraded: จบด้วย "C5 degraded mode ผ่าน" |
 
 สรุปชุดเต็ม: `./scripts/test.sh` (unit + integration + worker) และ `./scripts/race.sh` (concurrency) ครอบทุกกฎ
 
@@ -105,3 +108,16 @@ Jenkins ไม่ build เอง — มัน SSH เข้ากล่อง�
 | `ระบบยังไม่ขึ้น: รัน scripts/up.sh ก่อน` | `race.sh`/`smoke.sh` ถูกรันก่อนระบบขึ้น — รัน `up.sh` แล้วรอ api เป็น healthy (`docker compose -f infra/docker-compose.yml ps`) |
 | พอร์ต 8000/8080 ถูกใช้อยู่ | มีระบบชุดก่อนหน้ายังไม่หยุด — `./scripts/down.sh` |
 | `smoke.sh` หยุดที่ "คาดหวัง 409 แต่ได้ …" | กฎ C1 พัง จริง — ห้ามข้ามขั้นนี้ |
+
+## 7. การใช้ AI Coding Tools (ตามข้อ 8 ของรายละเอียดโครงการ)
+
+- **เครื่องมือ:** Claude Code (Anthropic) · ระบบที่ส่งมอบ**ไม่มี** LLM/AI ทำงานอยู่ข้างใน (D4)
+- **ใช้ช่วยงานประเภทใด:** อ่านและสรุปข้อกำหนดรายวิชา · ออกแบบ (spec, ADR, mockup v5) · เขียนโค้ด API, worker, หน้าเว็บ, migration · เขียนเทสต์และสคริปต์ตรวจ (smoke, race, degraded) · เอกสาร (README, traceability, architecture)
+- **วิธีระบุใน Git:** commit ที่ AI ช่วยมีบรรทัด `Co-Authored-By: Claude …` ท้ายข้อความ commit
+- **ทีมยังรับผิดชอบเอง:** ผลทุกอย่างผ่านเทสต์อัตโนมัติและ pipeline เดียวกับโค้ดที่เขียนเอง และสมาชิกต้องอธิบาย ตามรอย data flow และแก้ defect ในส่วนของตนได้ (Ownership Gate)
+
+## 8. ข้อจำกัดที่รู้อยู่แล้ว
+
+- Traefik dashboard ที่พอร์ต `8080` เปิดแบบไม่มีรหัส (`--api.insecure=true`) เพื่อให้กรรมการดู router และ replica ได้ระหว่างเดโม — ใช้แบบนี้ในกล่องรายวิชาเท่านั้น ห้ามเปิดพอร์ตนี้สู่สาธารณะ
+- ภาพถนนบนแผนที่ต้องใช้อินเทอร์เน็ต (ดูข้อ 1)
+- ช่องว่างที่ยังไม่มีเทสต์ดูได้ที่ `docs/traceability.md` หัวข้อ "ช่องว่างที่ยอมรับตรงๆ"
