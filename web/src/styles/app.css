@@ -41,6 +41,17 @@ main.wrap { padding-top: 32px; padding-bottom: 96px; }
 .navl:hover { color: var(--ink); }
 .navl[aria-current='page'] { color: var(--ink); box-shadow: inset 0 -2px 0 var(--brand); }
 .navl button, .navl-btn { background: none; border: 0; cursor: pointer; padding: 0 8px; min-height: 44px; color: var(--ink-2); font-size: 0.9375rem; font-weight: 500; }
+.acct { position: relative; }
+.acct-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 2px 8px 2px 2px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; font-weight: 600; font-size: 0.9375rem; }
+.acct-btn:hover, .acct-btn[aria-expanded='true'] { background: var(--sunk); border-color: var(--line-2); }
+.acct-btn .ava { width: 36px; height: 36px; font-size: 0.9375rem; }
+.acct-name { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acct-chev { color: var(--ink-3); transition: transform 300ms var(--ease); }
+.acct-btn[aria-expanded='true'] .acct-chev { transform: rotate(180deg); }
+.acct-menu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 30; min-width: 220px; display: flex; flex-direction: column; padding: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); animation: tip-in 300ms var(--ease); }
+.acct-who { display: flex; flex-direction: column; gap: 2px; padding: 8px 12px 12px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.acct-menu a, .acct-menu button { display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; border: 0; background: transparent; color: var(--ink); text-decoration: none; font-weight: 500; text-align: left; cursor: pointer; }
+.acct-menu a:hover, .acct-menu button:hover { background: var(--sunk); color: var(--ink); }
 .count-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--brand); color: var(--on-brand); font-family: var(--mono); font-size: 0.75rem; font-weight: 600; }
 
 /* ── buttons ────────────────────────────────────────── */
@@ -74,7 +85,14 @@ main.wrap { padding-top: 32px; padding-bottom: 96px; }
 .empty { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; padding: 56px 24px; background: var(--sunk); border-radius: 16px; }
 .skeleton { background: var(--line); border-radius: 12px; animation: pulse 1600ms var(--ease) infinite; }
 @keyframes pulse { 0%, 100% { opacity: 1 } 50% { opacity: 0.5 } }
-@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
+/* hover ที่ลื่น: ทุกอย่างที่กดได้ค่อยๆ เปลี่ยนสี/พื้น/เงา ด้วย curve เดียวกัน (ไม่ใช่สลับทันที) */
+a, .navl, .navl-btn, .seg button, .tabs button, .thread, .pet-opt, .map-row, .auth-tabs a, .acct-btn, .acct-menu a, .acct-menu button, .faq summary {
+  transition: color 300ms var(--ease), background-color 300ms var(--ease), border-color 300ms var(--ease), box-shadow 300ms var(--ease);
+}
+.btn { transition: background-color 300ms var(--ease), color 300ms var(--ease), border-color 300ms var(--ease), box-shadow 300ms var(--ease), transform 300ms var(--ease); }
+.pet-opt:hover { border-color: var(--ink-3); }
+.map-row:hover { background: var(--sunk); }
+.tabs button:hover, .auth-tabs a:hover { color: var(--ink); }
 
 /* ── messages ───────────────────────────────────────── */
 .error-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--alert); background: var(--alert-bg); color: var(--alert); font-weight: 500; }
@@ -116,6 +134,9 @@ main.wrap { padding-top: 32px; padding-bottom: 96px; }
 .photo { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 12px; background: var(--sunk); }
 .rcard.feat .photo { aspect-ratio: 16 / 9; }
 .found .photo { filter: grayscale(0.6); }
+.photo-illus { position: relative; overflow: hidden; }
+.photo-illus img { width: 100%; height: 100%; object-fit: cover; }
+.illus-tag { position: absolute; left: 8px; bottom: 8px; padding: 2px 8px; border-radius: 999px; background: rgba(17, 17, 17, 0.72); color: #F5F2EB; font-size: 0.75rem; font-weight: 600; }
 .photo-ph { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--ink-3); font-weight: 600; }
 .rbody { display: flex; flex-direction: column; gap: 16px; padding: 16px 8px 8px; }
 .place-label { display: flex; align-items: center; gap: 4px; color: var(--ink-3); font-size: 0.8125rem; font-weight: 600; }
@@ -232,12 +253,25 @@ main.wrap { padding-top: 32px; padding-bottom: 96px; }
 .map-row { display: flex; gap: 12px; padding: 12px; border-bottom: 1px solid var(--line); color: var(--ink); text-decoration: none; }
 .map-row.sel { background: var(--brand-tint); }
 .map-row img, .map-row .pet-thumb { width: 72px; height: 72px; border-radius: 8px; object-fit: cover; }
-.map-pane { display: flex; flex-direction: column; gap: 12px; padding: 16px; background: var(--map-land); }
+.map-pane { position: relative; background: var(--map-land); overflow: hidden; }
 .map-canvas { position: relative; width: 100%; aspect-ratio: 1000 / 640; }
 .map-canvas svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.map-label { position: absolute; translate: -50% 22px; font-size: 0.75rem; font-weight: 600; color: var(--ink-2); white-space: nowrap; pointer-events: none; }
-.map-pin { cursor: pointer; }
-.map-legend { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font-size: 0.8125rem; color: var(--ink-2); }
+.map-label { position: absolute; font-size: 0.75rem; font-weight: 600; color: var(--map-label); white-space: nowrap; pointer-events: none; text-shadow: 0 0 3px var(--map-land), 0 0 3px var(--map-land); }
+.map-pin { position: absolute; translate: -50% -50%; width: 36px; height: 36px; border-radius: 999px; border: 2px solid #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer; font-family: var(--mono); font-weight: 600; box-shadow: 0 2px 8px rgba(17, 17, 17, 0.3); transition: transform 300ms var(--ease), box-shadow 300ms var(--ease); }
+.map-pin:hover { transform: scale(1.1); }
+.map-pin[aria-pressed='true'] { transform: scale(1.2); z-index: 3; box-shadow: 0 0 0 3px var(--ink), 0 2px 8px rgba(17, 17, 17, 0.3); }
+.map-pin.p-search { background: var(--sticker-search); color: #111111; }
+.map-pin.p-lead { background: var(--sticker-lead); color: #111111; }
+.map-pin.p-found { background: var(--sticker-found); color: #FFFFFF; }
+.map-tip { position: absolute; z-index: 4; width: 260px; display: flex; gap: 8px; align-items: center; padding: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); color: var(--ink); animation: tip-in 500ms var(--ease); }
+.map-tip.above { translate: -50% calc(-100% - 28px); }
+.map-tip.below { translate: -50% 28px; }
+.map-tip img, .map-tip .pet-thumb { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; }
+.map-tip a { font-weight: 600; }
+@keyframes tip-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.map-legend { position: absolute; left: 12px; top: 12px; width: fit-content; max-width: calc(100% - 24px); display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font-size: 0.8125rem; color: var(--ink-2); }
+.map-legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 999px; border: 1.5px solid #FFFFFF; box-shadow: 0 0 0 1px var(--line-2); margin-right: 4px; vertical-align: -1px; }
+.map-note { padding: 8px 12px; font-size: 0.8125rem; color: var(--ink-3); border-top: 1px solid var(--line); background: var(--surface); }
 
 @media (max-width: 1023px) {
   .rgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -263,4 +297,11 @@ main.wrap { padding-top: 32px; padding-bottom: 96px; }
   .top-in { gap: 4px; }
   .navs { gap: 0; }
   .faq details p { padding-right: 0; }
+}
+
+/* ลดการเคลื่อนไหว — ไว้ท้ายไฟล์ให้ชนะ :hover ที่ประกาศไว้ก่อน */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton, .toast, .map-tip, .sheet, .acct-menu { animation: none; }
+  .acct-btn[aria-expanded='true'] .acct-chev { transform: none; }
+  .rcard:hover, .btn:active:not(:disabled), .map-pin:hover, .map-pin[aria-pressed='true'] { transform: none; }
 }

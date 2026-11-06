@@ -36,7 +36,7 @@ export interface Sighting {
   created_at: string
 }
 export interface ReportEvent { from_status: Status | null; to_status: Status; reason: string | null; created_at: string }
-export interface Message { id: number; sender_display_name: string; body: string; created_at: string }
+export interface Message { id: number; sender_display_name: string; body: string; created_at: string; mine: boolean }
 export interface Thread {
   id: string
   finder_display_name: string
@@ -67,6 +67,8 @@ const query = (q: object) => {
   for (const [k, v] of Object.entries(q)) if (v) p.set(k, String(v))
   return p
 }
+
+export const NOTIFICATIONS_CHANGED = 'notifications-changed'
 
 export const api = {
   me: () => request<User>('/api/me'),
@@ -108,6 +110,8 @@ export const api = {
     request<Message>(`/api/reports/${id}/messages`, jsonInit('POST', threadId ? { body, thread_id: threadId } : { body })),
 
   notifications: () => request<{ items: Notification[]; unread_count: number }>('/api/notifications'),
+  // อ่านแล้ว → บอก header ให้นับ badge ใหม่ทันที (ไม่ต้องรอเปลี่ยนหน้า)
   markNotificationsRead: (reportId?: string) =>
-    request<void>('/api/notifications/read', jsonInit('POST', reportId ? { report_id: reportId } : {})),
+    request<void>('/api/notifications/read', jsonInit('POST', reportId ? { report_id: reportId } : {}))
+      .then(() => { window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED)) }),
 }

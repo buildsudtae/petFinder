@@ -25,8 +25,9 @@ export function Register() {
     setError(null)
     try {
       await api.register({ email, password, display_name: displayName })
-      setUser(await api.login({ email, password }))     // register ไม่ตั้ง cookie — เข้าสู่ระบบต่อทันที
-      navigate(from, { replace: true })
+      const me = await api.login({ email, password })     // register ไม่ตั้ง cookie — เข้าสู่ระบบต่อทันที
+      setUser(me)
+      navigate(from, { replace: true, state: { flash: `สร้างบัญชีแล้ว เข้าสู่ระบบในชื่อ ${me.display_name}` } })
     } catch (caught) {
       setError(caught as ApiError)
     } finally {

@@ -30,6 +30,7 @@ class MessageOut(BaseModel):
     sender_display_name: str
     body: str
     created_at: datetime
+    mine: bool = False   # ผู้เรียกเป็นคนส่งเอง — ไม่ต้องเดาจากชื่อที่แสดง (ชื่อซ้ำกันได้) และไม่เปิด id ผู้ใช้
 
 
 class MessageList(BaseModel):

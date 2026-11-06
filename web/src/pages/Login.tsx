@@ -23,8 +23,9 @@ export function Login() {
     setBusy(true)
     setError(null)
     try {
-      setUser(await api.login({ email, password }))
-      navigate(from, { replace: true })
+      const me = await api.login({ email, password })
+      setUser(me)
+      navigate(from, { replace: true, state: { flash: `เข้าสู่ระบบแล้วในชื่อ ${me.display_name}` } })
     } catch (caught) {
       setError(caught as ApiError)
       // ไม่บอกว่าผิดช่องไหน: ข้อความรวม + กลับไปที่ช่องอีเมลเสมอ

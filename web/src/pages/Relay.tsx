@@ -3,7 +3,6 @@ import { Link, useParams } from 'react-router-dom'
 
 import type { ApiError } from '../api/client'
 import { api, type Message, type Report, type Thread } from '../api/endpoints'
-import { useAuth } from '../auth'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { Field } from '../components/Field'
 import { initialOf } from '../lib/labels'
@@ -16,7 +15,6 @@ import { useFormError } from '../lib/useFormError'
  */
 export function Relay() {
   const { id = '' } = useParams()
-  const { user } = useAuth()
   const [report, setReport] = useState<Report | null>(null)
   const [threads, setThreads] = useState<Thread[] | null>(null)
   const [current, setCurrent] = useState<string | null>(null)
@@ -56,7 +54,6 @@ export function Relay() {
   const loaded = threads !== null
   useEffect(() => { if (loaded) void openThread(current) }, [current, loaded, openThread])
 
-  const me = user?.display_name ?? ''
   const isOwner = report?.is_owner ?? false
   const thread = threads?.find((t) => t.id === current) ?? null
   const canWrite = isOwner ? !!thread : true   // ผู้พบเห็นที่ส่งเบาะแสแล้วเริ่มบทสนทนาได้เอง (ไม่งั้น API ตอบ 403)
@@ -120,7 +117,7 @@ export function Relay() {
             {messages?.length === 0 && <p className="meta">ยังไม่มีข้อความ</p>}
             <ol className="messages" aria-label="ข้อความ">
               {(messages ?? []).map((m) => {
-                const mine = m.sender_display_name === me
+                const mine = m.mine   // จากเซิร์ฟเวอร์ — ชื่อที่แสดงซ้ำกันได้
                 return (
                   <li key={m.id} className={mine ? 'bubble me' : 'bubble'}>
                     <p className="caption" style={{ color: 'inherit', opacity: 0.75 }}>{mine ? 'คุณ' : m.sender_display_name} · {dateTimeTh(m.created_at)}</p>

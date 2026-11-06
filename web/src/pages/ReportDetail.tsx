@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useLocation, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 
 import type { ApiError } from '../api/client'
 import { api, type Report, type ReportEvent, type Sighting } from '../api/endpoints'
@@ -19,7 +19,6 @@ type Sheet = 'close' | 'reopen' | null
 
 export function ReportDetail() {
   const { id = '' } = useParams()
-  const location = useLocation()
   const { user } = useAuth()
   const [report, setReport] = useState<Report | null>(null)
   const [sightings, setSightings] = useState<Sighting[]>([])
@@ -49,10 +48,7 @@ export function ReportDetail() {
 
   useEffect(() => { void load() }, [load])
 
-  // ข้อความยืนยันจากหน้าก่อน (เช่นส่งเบาะแสแล้ว) — เบาะแสใหม่ใน timeline คือหลักฐานที่ค้างบนหน้า toast แค่เสริม
-  const flash = (location.state as { flash?: string } | null)?.flash
-  const showToast = toast.show
-  useEffect(() => { if (flash) showToast(flash) }, [flash, showToast])
+  // ข้อความยืนยันจากหน้าก่อน (เช่นส่งเบาะแสแล้ว) แสดงที่ Layout — เบาะแสใหม่ใน timeline คือหลักฐานที่ค้างบนหน้า
 
   if (loadError && !report) {
     return (
