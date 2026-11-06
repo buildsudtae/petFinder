@@ -37,4 +37,17 @@ describe('NewReport', () => {
     expect(screen.getByText(/หายที่บางกะปิ/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'ประกาศตามหา' })).toBeInTheDocument()
   })
+
+  it('บริเวณที่ปักไว้ถูกล้างเมื่อเปลี่ยนไปเขตที่บริเวณนั้นไม่ได้อยู่', async () => {
+    // ร่างที่เก็บไว้ตอนต้อง login กลางทาง — ปักบริเวณไว้กลางเขตบางกะปิ
+    sessionStorage.setItem('pettech.draft.report', JSON.stringify({ name: 'ส้มจี๊ด', species: 'cat', district: 'บางกะปิ', area: [13.766, 100.645] }))
+    render(<MemoryRouter><NewReport /></MemoryRouter>)
+    await userEvent.click(await screen.findByRole('button', { name: 'ถัดไป' }))
+    expect(await screen.findByText(/ปักบริเวณไว้แล้ว/)).toBeInTheDocument()
+
+    const district = screen.getByLabelText(/^เขต/)
+    await userEvent.clear(district)
+    await userEvent.type(district, 'ลาดพร้าว')
+    expect(screen.getByText('ยังไม่ได้ปัก (ไม่บังคับ)')).toBeInTheDocument()
+  })
 })

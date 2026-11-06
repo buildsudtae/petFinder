@@ -212,7 +212,8 @@ export function ReportDetail() {
               <dt>เห็นครั้งสุดท้าย</dt>
               <dd><span className="mono">{dateTimeTh(report.last_seen_at)}</span> · {report.district}{report.area_note ? ` ${report.area_note}` : ''}</dd>
             </dl>
-            <DistrictMiniMap district={report.district} sightingDistricts={sightings.map((s) => s.district)} />
+            <DistrictMiniMap district={report.district} sightingDistricts={sightings.map((s) => s.district)}
+                             area={report.area_lat != null && report.area_lng != null ? [report.area_lat, report.area_lng] : null} />
             {report.description && (
               <div className="card"><p className="caption">ข้อความจากเจ้าของ</p><p>{report.description}</p></div>
             )}

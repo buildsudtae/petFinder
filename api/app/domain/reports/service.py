@@ -130,6 +130,9 @@ def change_status(db: Session, report_id: str, user: User, to: str, reason: str 
     if to == RESOLVED:
         report.status = RESOLVED
         report.resolved_at = datetime.now(UTC)
+        # เจอแล้วก็ไม่ต้องเก็บบริเวณที่หายไว้ต่อ — ลบทิ้งถาวร เปิดประกาศใหม่ก็ไม่กลับมา
+        report.area_lat = None
+        report.area_lng = None
     else:
         has_sightings = bool(db.scalar(select(func.count(Sighting.id)).where(Sighting.report_id == rid)))
         report.status = next_status_on_reopen(has_sightings)

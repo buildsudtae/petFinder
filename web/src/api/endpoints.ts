@@ -23,6 +23,9 @@ export interface Report {
   is_owner: boolean
   created_at: string
   resolved_at?: string | null
+  /** บริเวณที่หายโดยประมาณ (ปัดราว 100 ม.) — มีเฉพาะหน้าประกาศ ไม่มีในรายการ */
+  area_lat?: number | null
+  area_lng?: number | null
 }
 export interface Sighting {
   id: string
@@ -88,6 +91,7 @@ export const api = {
 
   createReport: (b: {
     pet_id: string; last_seen_at: string; district: string; area_note: string | null; description: string | null
+    area_lat: number | null; area_lng: number | null
   }) => request<Report>('/api/reports', jsonInit('POST', b)),
   /** หน้าเดียว + cursor ของหน้าถัดไป (null = หมดแล้ว) */
   reportPage: (q: ReportQuery) =>

@@ -61,3 +61,25 @@ export function createBaseMap(el: HTMLElement, opts: { onTileError?: () => void;
   map.setView(BKK_BOUNDS.getCenter(), MIN_ZOOM)
   return map
 }
+
+// บริเวณที่หายโดยประมาณ (ไม่บังคับ): ปัดเหลือทศนิยม 3 ตำแหน่ง ≈ 100 ม. ให้ตรงกับที่ server เก็บ
+// แล้วแสดงเป็นวงกลมรัศมี 150 ม. ไม่ใช่จุดเดียว — ไม่ชี้บ้านหลังไหน (D9)
+export const AREA_DECIMALS = 3
+export const AREA_RADIUS_M = 150
+export type Area = [number, number]   // [lat, lng] ที่ปัดแล้ว
+export const roundArea = (lat: number, lng: number): Area => [+lat.toFixed(AREA_DECIMALS), +lng.toFixed(AREA_DECIMALS)]
+
+/** จุดอยู่ในขอบเขตของเขตนี้หรือไม่ (ray casting บนทุกวงของทุกรูป) */
+export function inDistrict(f: DistrictFeature, lat: number, lng: number): boolean {
+  const polys = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates
+  let inside = false
+  for (const p of polys) {
+    for (const ring of p) {
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const [xi, yi] = ring[i], [xj, yj] = ring[j]
+        if ((yi > lat) !== (yj > lat) && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) inside = !inside
+      }
+    }
+  }
+  return inside
+}

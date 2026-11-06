@@ -10,7 +10,7 @@ from app.domain.pets.schemas import Species
 from app.domain.reports import service
 from app.domain.reports.models import ReportEvent
 from app.domain.reports.schemas import (
-    EventList, EventOut, ReportIn, ReportList, ReportOut, StatusFilter, StatusIn,
+    EventList, EventOut, ReportDetailOut, ReportIn, ReportList, ReportOut, StatusFilter, StatusIn,
 )
 from app.domain.sightings import service as sightings_service
 from app.errors import AppError
@@ -29,13 +29,18 @@ def _out(report, pet: Pet, sighting_count: int, viewer: User | None = None) -> R
     )
 
 
-@router.post("", status_code=status.HTTP_201_CREATED, response_model=ReportOut)
+def _detail(report, pet: Pet, sighting_count: int, viewer: User | None = None) -> ReportDetailOut:
+    return ReportDetailOut(**_out(report, pet, sighting_count, viewer).model_dump(),
+                           area_lat=report.area_lat, area_lng=report.area_lng)
+
+
+@router.post("", status_code=status.HTTP_201_CREATED, response_model=ReportDetailOut)
 def create(payload: ReportIn, db: Session = Depends(get_session), user: User = Depends(current_user)):
     data = payload.model_dump()
     pet_id = data.pop("pet_id")
     report = service.create_report(db, user, pet_id, **data)
     # ประกาศที่เพิ่งสร้างยังไม่มีเบาะแสแน่นอน จึงไม่ต้องยิง query นับ
-    return _out(report, db.get(Pet, report.pet_id), 0, user)
+    return _detail(report, db.get(Pet, report.pet_id), 0, user)
 
 
 @router.get("", response_model=ReportList)
@@ -58,12 +63,12 @@ def search(
     return ReportList(items=[_out(r, p, n, viewer) for r, p, n in rows], next_cursor=next_cursor)
 
 
-@router.patch("/{report_id}/status", response_model=ReportOut)
+@router.patch("/{report_id}/status", response_model=ReportDetailOut)
 def change_status(report_id: str, payload: StatusIn, db: Session = Depends(get_session),
                   user: User = Depends(current_user)):
     report = service.change_status(db, report_id, user, payload.to, payload.reason)
     pet = db.get(Pet, report.pet_id)
-    return _out(report, pet, sightings_service.count_for_report(db, report.id), user)
+    return _detail(report, pet, sightings_service.count_for_report(db, report.id), user)
 
 
 @router.get("/{report_id}/events", response_model=EventList)
@@ -79,8 +84,8 @@ def events(report_id: str, db: Session = Depends(get_session), user: User = Depe
                                      reason=e.reason, created_at=e.created_at) for e in rows])
 
 
-@router.get("/{report_id}", response_model=ReportOut)
+@router.get("/{report_id}", response_model=ReportDetailOut)
 def detail(report_id: str, db: Session = Depends(get_session), viewer: User | None = Depends(optional_user)):
     report = service.get_report_or_404(db, report_id)
     pet = db.get(Pet, report.pet_id)
-    return _out(report, pet, sightings_service.count_for_report(db, report.id), viewer)
+    return _detail(report, pet, sightings_service.count_for_report(db, report.id), viewer)

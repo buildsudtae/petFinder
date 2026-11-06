@@ -3,10 +3,12 @@ import { Link, useNavigate } from 'react-router-dom'
 
 import type { ApiError } from '../api/client'
 import { api, type Pet, type Report, type Species } from '../api/endpoints'
+import { AreaPicker } from '../components/AreaPicker'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { Field } from '../components/Field'
 import { CheckIcon } from '../components/Icons'
 import { PetPhoto } from '../components/PetPhoto'
+import { type Area, districtFeature, inDistrict } from '../lib/bkkMap'
 import { DISTRICTS, SPECIES_TH } from '../lib/labels'
 import { dateTimeTh, toLocalInput } from '../lib/time'
 import { useFormError } from '../lib/useFormError'
@@ -22,7 +24,7 @@ const STEPS = ['สัตว์ตัวไหน', 'หายที่ไหน
 
 interface Draft {
   petId: string; name: string; species: Species; color: string; marks: string
-  lastSeen: string; district: string; areaNote: string; description: string
+  lastSeen: string; district: string; areaNote: string; description: string; area: Area | null
 }
 
 function readDraft(): Partial<Draft> {
@@ -50,6 +52,7 @@ export function NewReport() {
   const [lastSeen, setLastSeen] = useState(d.lastSeen ?? toLocalInput(new Date(Date.now() - 3600_000)))
   const [district, setDistrict] = useState(d.district ?? '')
   const [areaNote, setAreaNote] = useState(d.areaNote ?? '')
+  const [area, setArea] = useState<Area | null>(d.area ?? null)
   const [description, setDescription] = useState(d.description ?? '')
   const [stepErrors, setStepErrors] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState(false)
@@ -71,6 +74,12 @@ export function NewReport() {
   const chosen = pets?.find((p) => p.id === petId) ?? null
   const petName = addingPet ? name : chosen?.name ?? ''
   const msg = (f: string) => stepErrors[f] ?? fieldMessage(f)
+  // เปลี่ยนเขตแล้วบริเวณเดิมไม่อยู่ในเขตใหม่ = ล้างทิ้ง ไม่ให้วงกลมอยู่นอกเขตที่ประกาศ
+  function changeDistrict(v: string) {
+    setDistrict(v)
+    const f = districtFeature(v)
+    if (area && (!f || !inDistrict(f, area[0], area[1]))) setArea(null)
+  }
 
   function validate(s: 1 | 2): boolean {
     const errs: Record<string, string> = {}
@@ -111,13 +120,15 @@ export function NewReport() {
         district: district.trim(),
         area_note: areaNote || null,
         description: description || null,
+        area_lat: area?.[0] ?? null,
+        area_lng: area?.[1] ?? null,
       })
       setDone(report)
     } catch (caught) {
       const err = caught as ApiError
       if (err.code === 'AUTH_REQUIRED') {
         try {
-          const draft: Draft = { petId: createdPet ? createdPet.id : petId, name, species, color, marks, lastSeen, district, areaNote, description }
+          const draft: Draft = { petId: createdPet ? createdPet.id : petId, name, species, color, marks, lastSeen, district, areaNote, description, area }
           sessionStorage.setItem(DRAFT, JSON.stringify(draft))
         } catch { /* storage ถูกบล็อก */ }
         navigate('/login', { state: { from: '/reports/new' } })
@@ -210,13 +221,18 @@ export function NewReport() {
       {step === 2 && (
         <div className="stack">
           <h2>{STEPS[1]}</h2>
-          <Field id="district" label="เขต" error={msg('district')} hint="เลือกจาก 50 เขต กทม. · หมุดบนแผนที่อยู่ที่จุดกลางของเขต ไม่ใช่บ้านของคุณ">
-            <input value={district} onChange={(e) => setDistrict(e.target.value)} list="districts" autoComplete="off" aria-required="true" />
+          <Field id="district" label="เขต" error={msg('district')} hint="เลือกจาก 50 เขต กทม.">
+            <input value={district} onChange={(e) => changeDistrict(e.target.value)} list="districts" autoComplete="off" aria-required="true" />
           </Field>
           <datalist id="districts">{DISTRICTS.map((x) => <option key={x} value={x} />)}</datalist>
           <Field id="area_note" label="จุดสังเกต (ไม่บังคับ)" error={msg('area_note')} hint="ชื่อซอยหรือจุดสังเกต ไม่ต้องบอกบ้านเลขที่">
             <input value={areaNote} onChange={(e) => setAreaNote(e.target.value)} maxLength={200} />
           </Field>
+          <div className="field">
+            <p className="field-label" id="area-label">บริเวณที่หายบนแผนที่ (ไม่บังคับ)</p>
+            <p className="hint">ช่วยให้คนแถวนั้นรู้ว่าควรหาตรงไหน ระบบเก็บแบบหยาบราว 100 ม. แสดงเป็นวงกลม และลบทิ้งเมื่อปิดประกาศว่าพบแล้ว · ไม่ควรปักตรงหน้าบ้านพอดี</p>
+            <AreaPicker district={district} value={area} onChange={setArea} />
+          </div>
           <Field id="last_seen_at" label="เห็นครั้งสุดท้าย" error={msg('last_seen_at')}>
             <input type="datetime-local" value={lastSeen} max={toLocalInput(new Date())} onChange={(e) => setLastSeen(e.target.value)} />
           </Field>
@@ -236,9 +252,10 @@ export function NewReport() {
             <div>
               <p><strong>{petName}</strong> · {SPECIES_TH[addingPet ? species : chosen?.species ?? 'other']}</p>
               <p className="meta">หายที่{district}{areaNote ? ` ${areaNote}` : ''} · {lastSeen ? dateTimeTh(new Date(lastSeen).toISOString()) : ''}</p>
+              {area && <p className="meta">ปักบริเวณที่หายไว้ คนอื่นเห็นเป็นวงกลมรัศมีราว 150 ม.</p>}
             </div>
           </div>
-          <p className="meta">ประกาศแสดงต่อสาธารณะ: ชื่อ ชนิด รูป เขต จุดสังเกต และข้อความถึงคนที่เห็น — ไม่แสดงชื่อหรือข้อมูลติดต่อของคุณ</p>
+          <p className="meta">ประกาศแสดงต่อสาธารณะ: ชื่อ ชนิด รูป เขต จุดสังเกต บริเวณโดยประมาณ (ถ้าปัก) และข้อความถึงคนที่เห็น — ไม่แสดงชื่อหรือข้อมูลติดต่อของคุณ</p>
           {error && <p className="meta">แก้แล้วกดประกาศอีกครั้งได้ ระบบจะไม่สร้างสัตว์ซ้ำ</p>}
         </div>
       )}
