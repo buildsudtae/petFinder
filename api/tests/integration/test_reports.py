@@ -113,3 +113,64 @@ def test_mine_returns_own_reports_in_every_status_and_not_others(make_user):
     assert closed_id not in {i["id"] for i in owner["client"].get("/api/reports").json()["items"]}   # ไม่ใส่ mine = เหมือนเดิม
     only_closed = owner["client"].get("/api/reports?mine=true&status=RESOLVED").json()["items"]
     assert [i["id"] for i in only_closed] == [closed_id]
+
+
+# --- ตัวกรอง, รวมที่พบแล้ว, หน้าถัดไป, วันที่พบ ---------------------------------
+
+def test_species_filter_returns_only_that_species(make_user, client):
+    u = make_user()
+    cat = _mk_report(u).json()["id"]                      # _mk_report สร้างแมว
+    dog_pet = u["client"].post("/api/pets", json={"name": "โกโก้", "species": "dog"}).json()
+    dog = u["client"].post("/api/reports", json={
+        "pet_id": dog_pet["id"], "last_seen_at": (datetime.now(UTC) - timedelta(hours=1)).isoformat(),
+        "district": "บางกะปิ"}).json()["id"]
+    assert [i["id"] for i in client.get("/api/reports?species=dog").json()["items"]] == [dog]
+    assert [i["id"] for i in client.get("/api/reports?species=cat").json()["items"]] == [cat]
+
+
+def test_district_filter_excludes_other_districts(make_user, client):
+    u = make_user()
+    here = _mk_report(u, district="ลาดพร้าว").json()["id"]
+    _mk_report(u, district="บางนา")
+    assert [i["id"] for i in client.get("/api/reports", params={"district": "ลาดพร้าว"}).json()["items"]] == [here]
+
+
+def test_include_resolved_lists_open_and_resolved_together(make_user, client):
+    u = make_user()
+    open_id = _mk_report(u).json()["id"]
+    closed_id = _mk_report(u).json()["id"]
+    u["client"].patch(f"/api/reports/{closed_id}/status", json={"to": "RESOLVED"})
+    assert {i["id"] for i in client.get("/api/reports?include_resolved=true").json()["items"]} == {open_id, closed_id}
+    assert [i["id"] for i in client.get("/api/reports").json()["items"]] == [open_id]
+
+
+def test_cursor_pages_through_every_report_once_newest_first(make_user, client):
+    u = make_user()
+    created = [_mk_report(u).json()["id"] for _ in range(5)]
+    seen, cursor, pages = [], None, 0
+    while True:
+        params = {"limit": 2, **({"cursor": cursor} if cursor else {})}
+        body = client.get("/api/reports", params=params).json()
+        seen += [i["id"] for i in body["items"]]
+        pages += 1
+        cursor = body["next_cursor"]
+        if cursor is None:
+            break
+    assert pages == 3
+    assert seen == list(reversed(created))
+
+
+def test_invalid_cursor_is_422(client):
+    r = client.get("/api/reports", params={"cursor": "not-a-cursor"})
+    assert r.status_code == 422
+    assert r.json()["field"] == "cursor"
+
+
+def test_resolved_at_is_set_on_close_and_cleared_on_reopen(make_user, client):
+    u = make_user()
+    rid = _mk_report(u).json()["id"]
+    assert client.get(f"/api/reports/{rid}").json()["resolved_at"] is None
+    u["client"].patch(f"/api/reports/{rid}/status", json={"to": "RESOLVED"})
+    assert client.get(f"/api/reports/{rid}").json()["resolved_at"] is not None
+    u["client"].patch(f"/api/reports/{rid}/status", json={"to": "SEARCHING", "reason": "ปิดผิดตัว"})
+    assert client.get(f"/api/reports/{rid}").json()["resolved_at"] is None
