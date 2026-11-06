@@ -67,6 +67,10 @@ def _without_metadata(data: bytes, content_type: str) -> bytes:
     return out.getvalue()
 
 
+def upload_url(key: str | None) -> str | None:
+    return f"/api/uploads/{key}" if key else None
+
+
 def delete_upload(key: str) -> None:
     """ลบไฟล์ที่เพิ่งบันทึก — ใช้เมื่อ request จบโดยไม่ได้สร้างแถว sighting ใหม่"""
     (upload_dir() / key).unlink(missing_ok=True)

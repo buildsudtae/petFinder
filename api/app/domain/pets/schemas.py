@@ -18,6 +18,7 @@ class PetOut(BaseModel):
     species: str
     color: str | None
     marks: str | None
+    photo_url: str | None = None
 
 
 class PetList(BaseModel):

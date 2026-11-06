@@ -35,6 +35,7 @@ class ReportOut(BaseModel):
     species: str
     color: str | None
     marks: str | None
+    photo_url: str | None = None      # รูปปัจจุบันของสัตว์ตัวนี้
     last_seen_at: datetime
     district: str
     area_note: str | None

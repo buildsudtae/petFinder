@@ -14,6 +14,7 @@ from app.domain.reports.schemas import (
 )
 from app.domain.sightings import service as sightings_service
 from app.errors import AppError
+from app.storage import upload_url
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
@@ -21,7 +22,7 @@ router = APIRouter(prefix="/api/reports", tags=["reports"])
 def _out(report, pet: Pet, sighting_count: int, viewer: User | None = None) -> ReportOut:
     return ReportOut(
         id=str(report.id), status=report.status, pet_name=pet.name, species=pet.species,
-        color=pet.color, marks=pet.marks, last_seen_at=report.last_seen_at,
+        color=pet.color, marks=pet.marks, photo_url=upload_url(pet.photo_key), last_seen_at=report.last_seen_at,
         district=report.district, area_note=report.area_note, description=report.description,
         sighting_count=sighting_count, created_at=report.created_at,
         is_owner=viewer is not None and report.owner_id == viewer.id,
