@@ -23,7 +23,7 @@ pending() { $DC exec -T db psql -U pettech -d pettech -tAc "select count(*) from
 printf '%s' 'บางกะปิ' > "$TMP/district"
 
 [ -f .env ] || { echo "ไม่พบ .env — คัดลอกจาก .env.example ก่อน"; exit 1; }
-api "$BASE/api/health" >/dev/null || { echo "ระบบยังไม่ขึ้น: รัน scripts/up.sh ก่อน"; exit 1; }
+api "$BASE/api/health" 2>/dev/null | grep -q '"status":"ok"' || { echo "ระบบยังไม่ขึ้น: รัน scripts/up.sh ก่อน"; exit 1; }
 
 say "หยุด rabbitmq และ worker"
 $DC stop rabbitmq worker >/dev/null

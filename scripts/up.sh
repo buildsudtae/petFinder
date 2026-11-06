@@ -12,5 +12,15 @@ fi
 # worker image is FROM pettech-api: build api first so compose does not race to pull it
 docker compose --env-file .env -f infra/docker-compose.yml build api
 docker compose --env-file .env -f infra/docker-compose.yml up -d --build
+# รอจน api ลงทะเบียนกับ Traefik — ก่อนหน้านั้น /api/health ตกไปที่ web ซึ่งตอบ 200 เป็น HTML
+# จึงต้องเช็ก "status":"ok" ไม่ใช่แค่ HTTP 200 (เงื่อนไขเดียวกับ stage Deploy ใน Jenkinsfile)
+printf 'รอระบบพร้อม'
+ok=0
+for i in $(seq 1 60); do
+  if curl -fsS http://localhost:8000/api/health 2>/dev/null | grep -q '"status":"ok"'; then ok=1; break; fi
+  printf '.'; sleep 2
+done
+echo
 docker compose -f infra/docker-compose.yml ps
+[ "$ok" = 1 ] || { echo "ระบบไม่พร้อมภายใน 120 วินาที — ดู log: docker compose -f infra/docker-compose.yml logs api"; exit 1; }
 echo "เปิด http://localhost:8000 · dashboard http://localhost:8080"
