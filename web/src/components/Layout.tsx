@@ -83,7 +83,7 @@ export function Layout() {
       <a href="#main" className="skip-link">ข้ามไปยังเนื้อหา</a>
       <header className="top">
         <div className="wrap top-in">
-          <Link to="/" className="brand" aria-label="ตามหา หน้าแรก"><Logo />ตามหา</Link>
+          <Link to="/" className="brand" aria-label="La peace หน้าแรก"><Logo />La peace</Link>
           <nav aria-label="เมนูหลัก" className="navs">
             <NavLink to="/" end className="navl hide-sm">ประกาศ</NavLink>
             <NavLink to="/map" className="navl hide-sm">แผนที่</NavLink>
@@ -122,7 +122,7 @@ export function Layout() {
       </main>
       <footer className="site-foot">
         <div className="wrap">
-          <span className="meta">ตามหา · ระบบไม่เก็บและไม่แสดงเบอร์โทร อีเมล หรือที่อยู่ของใคร</span>
+          <span className="meta">La peace · ระบบไม่เก็บและไม่แสดงเบอร์โทร อีเมล หรือที่อยู่ของใคร</span>
           <nav aria-label="ลิงก์ท้ายหน้า" className="row">
             <Link to="/map" className="meta">แผนที่</Link>
             <Link to="/#faq" className="meta">คำถามที่พบบ่อย</Link>
