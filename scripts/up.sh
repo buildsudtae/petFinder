@@ -2,6 +2,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 [ -f .env ] || { echo "ไม่พบ .env — คัดลอกจาก .env.example ก่อน"; exit 1; }
+# .env ที่คัดลอกจาก checkout บน Windows มีท้ายบรรทัด CRLF — ตัดตัวอักษร CR ออกก่อน ไม่งั้นเช็ก JWT_SECRET ด้านล่างไม่เจอ
+sed -i 's/\r$//' .env
 # .env copied straight from .env.example still has the published placeholder JWT_SECRET, which the api
 # refuses to boot with: replace it with a fresh random value (only that line; other values are kept)
 if grep -q '^JWT_SECRET=generate-with-openssl-rand-hex-32$' .env; then
