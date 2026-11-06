@@ -1,9 +1,18 @@
+import io
 import os
 from datetime import UTC, datetime, timedelta
 
+from PIL import Image
 from sqlalchemy import create_engine, text
 
-PNG = bytes.fromhex("89504e470d0a1a0a") + b"\x00" * 64
+
+def _png() -> bytes:
+    buf = io.BytesIO()
+    Image.new("RGB", (8, 8), "white").save(buf, "PNG")   # ต้องถอดรหัสได้จริง: storage เข้ารหัสรูปใหม่ก่อนเก็บ
+    return buf.getvalue()
+
+
+PNG = _png()
 
 
 def _post_sighting(user, rid, idem="k1", seen_at=None, note="เห็นแมวตัวนี้แถวตลาด", with_photo=True):
@@ -163,7 +172,8 @@ def test_photo_is_served_back(make_user, open_report, client):
     assert url and url.startswith("/api/uploads/")
     got = client.get(url)
     assert got.status_code == 200
-    assert got.content == PNG
+    with Image.open(io.BytesIO(got.content)) as im:   # เข้ารหัสใหม่แล้ว ไบต์ไม่เท่าต้นฉบับ แต่ต้องเป็นรูปเดิม
+        assert (im.format, im.size) == ("PNG", (8, 8))
 
 
 def test_non_image_photo_is_rejected(make_user, open_report):

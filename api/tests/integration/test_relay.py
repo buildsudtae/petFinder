@@ -162,3 +162,97 @@ def test_failed_thread_insert_is_loud_and_never_writes_into_another_finders_thre
     assert status == 500
     assert _msgs(f1, rid) == ["ของคนที่หนึ่ง"]
     assert _msgs(f2, rid) == []
+
+
+# --- เลือกคู่สนทนา (thread) และข้อความที่ยังไม่อ่าน -----------------------------
+
+def _threads(user, rid):
+    return user["client"].get(f"/api/reports/{rid}/threads")
+
+
+def _two_finders_with_threads(make_user, open_report):
+    f1, f2 = make_user(display_name="คุณฝน"), make_user(display_name="คุณต้น")
+    for f, idem in ((f1, "th-1"), (f2, "th-2")):
+        _post_sighting(f, open_report["id"], idem=idem)
+        assert _send(f, open_report["id"], body=f"สวัสดีจาก{idem}").status_code == 201
+    items = _threads(open_report, open_report["id"]).json()["items"]
+    by_name = {t["finder_display_name"]: t["id"] for t in items}
+    return f1, f2, by_name
+
+
+def test_owner_lists_one_thread_per_finder_without_user_ids(make_user, open_report):
+    f1, f2, by_name = _two_finders_with_threads(make_user, open_report)
+    items = _threads(open_report, open_report["id"]).json()["items"]
+    assert set(by_name) == {"คุณฝน", "คุณต้น"}
+    for t in items:
+        assert set(t) == {"id", "finder_display_name", "sighting_district", "sighting_area_note",
+                          "last_message", "last_message_at", "last_message_mine", "unread_count"}
+        assert t["sighting_district"] == "บางกะปิ"
+        assert f1["id"] not in str(t) and f2["id"] not in str(t)
+        assert f1["email"] not in str(t) and f2["email"] not in str(t)
+
+
+def test_owner_replies_to_the_chosen_thread_when_several_finders_exist(make_user, open_report):
+    f1, f2, by_name = _two_finders_with_threads(make_user, open_report)
+    r = open_report["client"].post(f"/api/reports/{open_report['id']}/messages",
+                                   json={"body": "ขอบคุณคุณฝน", "thread_id": by_name["คุณฝน"]})
+    assert r.status_code == 201
+    f1_bodies = [m["body"] for m in f1["client"].get(f"/api/reports/{open_report['id']}/messages").json()["items"]]
+    f2_bodies = [m["body"] for m in f2["client"].get(f"/api/reports/{open_report['id']}/messages").json()["items"]]
+    assert "ขอบคุณคุณฝน" in f1_bodies
+    assert "ขอบคุณคุณฝน" not in f2_bodies
+
+
+def test_owner_reads_only_the_chosen_thread(make_user, open_report):
+    _, _, by_name = _two_finders_with_threads(make_user, open_report)
+    items = open_report["client"].get(f"/api/reports/{open_report['id']}/messages",
+                                      params={"thread_id": by_name["คุณต้น"]}).json()["items"]
+    assert [m["body"] for m in items] == ["สวัสดีจากth-2"]
+
+
+def test_thread_id_from_another_report_is_404(make_user, open_report):
+    _, _, by_name = _two_finders_with_threads(make_user, open_report)
+    other = open_report["client"].post("/api/reports", json={
+        "pet_id": open_report["client"].get("/api/pets").json()["items"][0]["id"],
+        "last_seen_at": "2026-01-01T00:00:00+00:00", "district": "บางนา"}).json()
+    r = open_report["client"].post(f"/api/reports/{other['id']}/messages",
+                                   json={"body": "ผิดห้อง", "thread_id": by_name["คุณฝน"]})
+    assert r.status_code == 404
+
+
+def test_finder_cannot_use_another_finders_thread(make_user, open_report):
+    f1, _, by_name = _two_finders_with_threads(make_user, open_report)
+    rid = open_report["id"]
+    send = f1["client"].post(f"/api/reports/{rid}/messages", json={"body": "แอบ", "thread_id": by_name["คุณต้น"]})
+    read = f1["client"].get(f"/api/reports/{rid}/messages", params={"thread_id": by_name["คุณต้น"]})
+    mark = f1["client"].post(f"/api/reports/{rid}/threads/{by_name['คุณต้น']}/read")
+    assert (send.status_code, read.status_code, mark.status_code) == (403, 403, 403)
+    assert "สวัสดีจากth-2" not in read.text
+
+
+def test_finder_sees_only_own_thread_and_stranger_sees_none(make_user, open_report):
+    f1, _, _ = _two_finders_with_threads(make_user, open_report)
+    mine = _threads(f1, open_report["id"]).json()["items"]
+    assert [t["finder_display_name"] for t in mine] == ["คุณฝน"]
+    assert _threads(make_user(), open_report["id"]).json()["items"] == []
+
+
+def test_threads_require_login(client, open_report):
+    assert client.get(f"/api/reports/{open_report['id']}/threads").status_code == 401
+
+
+def test_unread_count_counts_the_other_side_and_clears_after_read(make_user, open_report):
+    f1, _, by_name = _two_finders_with_threads(make_user, open_report)
+    rid, tid = open_report["id"], by_name["คุณฝน"]
+    _send(f1, rid, body="ยังอยู่ที่เดิมครับ")
+
+    def owner_unread():
+        return {t["id"]: t["unread_count"] for t in _threads(open_report, rid).json()["items"]}[tid]
+
+    assert owner_unread() == 2
+    assert open_report["client"].post(f"/api/reports/{rid}/threads/{tid}/read").status_code == 204
+    assert owner_unread() == 0
+    # ข้อความของตัวเองไม่นับเป็นข้อความใหม่ ส่วนอีกฝั่งเห็นเป็นข้อความใหม่ 1
+    open_report["client"].post(f"/api/reports/{rid}/messages", json={"body": "กำลังไปครับ", "thread_id": tid})
+    assert owner_unread() == 0
+    assert _threads(f1, rid).json()["items"][0]["unread_count"] == 1

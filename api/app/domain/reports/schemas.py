@@ -35,6 +35,7 @@ class ReportOut(BaseModel):
     species: str
     color: str | None
     marks: str | None
+    photo_url: str | None = None      # รูปปัจจุบันของสัตว์ตัวนี้
     last_seen_at: datetime
     district: str
     area_note: str | None
@@ -42,6 +43,7 @@ class ReportOut(BaseModel):
     sighting_count: int
     is_owner: bool = False   # about the caller only; owner_id is never exposed
     created_at: datetime
+    resolved_at: datetime | None = None   # วันที่เจ้าของปิดว่าพบแล้ว (เหตุผลยังอยู่ใน /events เฉพาะเจ้าของ)
 
 
 class ReportList(BaseModel):

@@ -14,6 +14,7 @@ from app.domain.reports.schemas import (
 )
 from app.domain.sightings import service as sightings_service
 from app.errors import AppError
+from app.storage import upload_url
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
@@ -21,9 +22,9 @@ router = APIRouter(prefix="/api/reports", tags=["reports"])
 def _out(report, pet: Pet, sighting_count: int, viewer: User | None = None) -> ReportOut:
     return ReportOut(
         id=str(report.id), status=report.status, pet_name=pet.name, species=pet.species,
-        color=pet.color, marks=pet.marks, last_seen_at=report.last_seen_at,
+        color=pet.color, marks=pet.marks, photo_url=upload_url(pet.photo_key), last_seen_at=report.last_seen_at,
         district=report.district, area_note=report.area_note, description=report.description,
-        sighting_count=sighting_count, created_at=report.created_at,
+        sighting_count=sighting_count, created_at=report.created_at, resolved_at=report.resolved_at,
         is_owner=viewer is not None and report.owner_id == viewer.id,
     )
 
@@ -44,14 +45,17 @@ def search(
     status: StatusFilter | None = None,
     limit: int = Query(default=20, ge=1, le=100),
     mine: bool = False,
+    include_resolved: bool = False,
+    cursor: str | None = Query(default=None, max_length=200),
     db: Session = Depends(get_session),
     viewer: User | None = Depends(optional_user),
 ):
     if mine and viewer is None:
         raise AppError("AUTH_REQUIRED", "กรุณาเข้าสู่ระบบก่อนใช้งาน")
-    rows = service.search(db, species=species, district=district, status=status, limit=limit,
-                          owner_id=viewer.id if mine else None)
-    return ReportList(items=[_out(r, p, n, viewer) for r, p, n in rows])
+    rows, next_cursor = service.search(db, species=species, district=district, status=status, limit=limit,
+                                       owner_id=viewer.id if mine else None,
+                                       include_resolved=include_resolved, cursor=cursor)
+    return ReportList(items=[_out(r, p, n, viewer) for r, p, n in rows], next_cursor=next_cursor)
 
 
 @router.patch("/{report_id}/status", response_model=ReportOut)

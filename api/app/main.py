@@ -9,6 +9,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import DEFAULT_JWT_SECRET, KNOWN_PUBLIC_SECRETS, PLACEHOLDER_JWT_SECRET, get_settings
 from app.domain.auth.router import router as auth_router
+from app.domain.notifications.router import router as notifications_router
 from app.domain.pets.router import router as pets_router
 from app.domain.reports.router import router as reports_router
 from app.domain.relay.router import router as relay_router
@@ -59,6 +60,7 @@ app.include_router(pets_router)
 app.include_router(reports_router)
 app.include_router(sightings_router)
 app.include_router(relay_router)
+app.include_router(notifications_router)
 
 
 @app.get("/api/uploads/{key}")

@@ -19,6 +19,22 @@ def list_own_pets(db: Session, user: User) -> list[Pet]:
     return list(db.scalars(select(Pet).where(Pet.owner_id == user.id).order_by(Pet.created_at)))
 
 
+def get_owned_pet_by_id(db: Session, pet_id: str, user: User) -> Pet:
+    try:
+        pid = uuid.UUID(pet_id)
+    except ValueError:
+        raise AppError("NOT_FOUND", "ไม่พบสัตว์เลี้ยงที่ระบุ")
+    return get_owned_pet(db, pid, user)
+
+
+def replace_photo(db: Session, pet: Pet, photo_key: str) -> str | None:
+    """คืน key ของรูปเดิม ให้ผู้เรียกลบไฟล์หลัง commit สำเร็จแล้วเท่านั้น"""
+    previous = pet.photo_key
+    pet.photo_key = photo_key
+    db.commit()
+    return previous
+
+
 def get_owned_pet(db: Session, pet_id: uuid.UUID, user: User) -> Pet:
     pet = db.get(Pet, pet_id)
     if pet is None:

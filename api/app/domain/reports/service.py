@@ -1,7 +1,8 @@
+import base64
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.domain.auth.models import User
@@ -40,7 +41,23 @@ def get_report_or_404(db: Session, report_id: str) -> LostReport:
     return report
 
 
-def search(db: Session, species=None, district=None, status=None, limit=20, owner_id=None):
+def encode_cursor(report: LostReport) -> str:
+    raw = f"{report.created_at.isoformat()}|{report.id}"
+    return base64.urlsafe_b64encode(raw.encode()).decode().rstrip("=")
+
+
+def decode_cursor(cursor: str) -> tuple[datetime, uuid.UUID]:
+    try:
+        raw = base64.urlsafe_b64decode(cursor + "=" * (-len(cursor) % 4)).decode()
+        created, rid = raw.split("|")
+        return datetime.fromisoformat(created), uuid.UUID(rid)
+    except ValueError:                     # base64/unicode/split/isoformat/uuid ล้วน raise ValueError
+        raise AppError("VALIDATION", "ตำแหน่งหน้าถัดไปไม่ถูกต้อง กรุณาโหลดรายการใหม่", field="cursor")
+
+
+def search(db: Session, species=None, district=None, status=None, limit=20, owner_id=None,
+           include_resolved=False, cursor=None):
+    """คืน (แถว, cursor ของหน้าถัดไปหรือ None) — เรียงประกาศล่าสุดก่อน, id ตัดสินเมื่อเวลาเท่ากัน"""
     # correlated subquery — นับเบาะแสในคำสั่งเดียว ไม่ยิง N+1 ต่อประกาศ
     sighting_count = (
         select(func.count(Sighting.id))
@@ -51,7 +68,7 @@ def search(db: Session, species=None, district=None, status=None, limit=20, owne
     stmt = select(LostReport, Pet, sighting_count).join(Pet, Pet.id == LostReport.pet_id)
     if status:
         stmt = stmt.where(LostReport.status == status)
-    elif owner_id is None:                       # ของตัวเอง (mine) เห็นทุกสถานะ รวมที่ปิดแล้ว
+    elif owner_id is None and not include_resolved:   # mine และ include_resolved เห็นทุกสถานะ
         stmt = stmt.where(LostReport.status.in_(OPEN_STATUSES))
     if owner_id is not None:
         stmt = stmt.where(LostReport.owner_id == owner_id)
@@ -59,7 +76,14 @@ def search(db: Session, species=None, district=None, status=None, limit=20, owne
         stmt = stmt.where(Pet.species == species)
     if district:
         stmt = stmt.where(LostReport.district == district)
-    return list(db.execute(stmt.order_by(LostReport.created_at.desc()).limit(limit)))
+    if cursor:
+        after_created, after_id = decode_cursor(cursor)
+        stmt = stmt.where(or_(LostReport.created_at < after_created,
+                              and_(LostReport.created_at == after_created, LostReport.id < after_id)))
+    rows = list(db.execute(stmt.order_by(LostReport.created_at.desc(), LostReport.id.desc()).limit(limit + 1)))
+    if len(rows) > limit:
+        return rows[:limit], encode_cursor(rows[limit - 1][0])
+    return rows, None
 
 
 API_SETTABLE = (RESOLVED, SEARCHING)

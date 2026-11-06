@@ -14,7 +14,7 @@ HERE = Path(__file__).resolve()
 # test image (infra/Dockerfile.test): /srv/tests/unit/this.py -> api root = parents[2]
 _ROOTS = [HERE.parents[3], HERE.parents[2]]
 
-REQUIREMENTS = ["FR-01", "FR-02", "FR-03", "FR-04", "FR-05", "FR-06", "FR-07",
+REQUIREMENTS = ["FR-01", "FR-02", "FR-03", "FR-04", "FR-05", "FR-06", "FR-07", "FR-08",
                 "C1", "C2", "C3", "C4", "C5"]
 
 

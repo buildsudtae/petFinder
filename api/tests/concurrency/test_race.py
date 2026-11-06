@@ -1,3 +1,4 @@
+import io
 import os
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -5,9 +6,18 @@ from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
+from PIL import Image
 
 BASE = os.environ.get("BASE_URL", "http://traefik")
-PNG = bytes.fromhex("89504e470d0a1a0a") + b"\x00" * 64
+
+
+def _png() -> bytes:
+    buf = io.BytesIO()
+    Image.new("RGB", (8, 8), "white").save(buf, "PNG")   # ต้องถอดรหัสได้จริง: storage เข้ารหัสรูปใหม่ก่อนเก็บ
+    return buf.getvalue()
+
+
+PNG = _png()
 
 pytestmark = pytest.mark.skipif(not os.environ.get("BASE_URL"), reason="ต้องรันกับระบบที่ขึ้นอยู่แล้ว")
 

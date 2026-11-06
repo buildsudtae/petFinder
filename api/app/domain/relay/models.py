@@ -18,6 +18,16 @@ class RelayThread(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
+class RelayRead(Base):
+    """ข้อความล่าสุดที่ผู้ร่วมสนทนาแต่ละคนเปิดอ่านแล้ว — ใช้นับข้อความใหม่ (จุดแดง)"""
+    __tablename__ = "relay_reads"
+
+    thread_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("relay_threads.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    last_read_message_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class RelayMessage(Base):
     __tablename__ = "relay_messages"
 
