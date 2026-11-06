@@ -1,32 +1,49 @@
-@import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600&family=Geist+Mono:wght@500;600&display=swap');
 
-/* โทนอบอุ่นแบบ pet-care ตามไฟล์ Figma — แทนที่ palette ใน docs/design/ui-ux.md (กฎพฤติกรรมในเอกสารนั้นยังใช้ครบ) */
+/* v5 (D9): โครงแอปแบบ v4 ในโทนกระดาษ + ส้มของใบประกาศ — สถานะยังสื่อ 4 สัญญาณตาม ui-ux.md ข้อ 4 */
 :root {
-  --green-900: #133D26; --green-700: #1B6B3A; --green-500: #2F9E52; --green-100: #DCEFE0;
-  --cream-200: #F6E9BF; --cream-100: #FBF3DA; --page: #FFFDF7; --card: #FFFFFF;
-  --ink: #18271D; --ink-2: #4E5F54; --ink-3: #7E8D83; --on-dark: #FFFDF7;
-  --line-soft: #E8E2D1; --line-strong: #C9C2AC;
-  --status-searching: #C0411E; --status-searching-bg: #FBE7DE;
-  --status-lead: #A66A09;      --status-lead-bg: #FAEFD6;
-  --status-found: #1B6B3A;     --status-found-bg: #DCEFE0;
-  --radius-card: 28px; --radius-photo: 20px; --radius-pill: 999px; --radius-input: 16px;
+  --paper: #F5F2EB; --surface: #FFFFFF; --sunk: #ECE7DC;
+  --ink: #111111; --ink-2: #45443F; --ink-3: #66655F;
+  --line: #D9D3C6; --line-2: #C4BCAB;
+  --brand: #FF5A1F; --brand-hover: #FF7240; --on-brand: #111111;
+  --brand-text: #B3340E; --brand-tint: #FFE9DE;
+  --h-from: #000000; --h-to: #666666;
 
-  --font-display: 'Anuphan', 'IBM Plex Sans Thai', system-ui, sans-serif;
-  --font-body: 'IBM Plex Sans Thai', system-ui, sans-serif;
+  /* สถานะ: สติกเกอร์ทึบ (ใช้บนรูป/การ์ด) + สีข้อความบนพื้นอ่อน (ใช้ใน alert/ข้อความ) */
+  --sticker-search: #FF5A1F; --sticker-lead: #FFC53D; --sticker-found: #1E7A4C;
+  --on-sticker: #111111; --on-found: #FFFFFF;
+  --alert: #B3340E; --alert-bg: #FFE3D6;
+  --found: #1E7A4C; --found-bg: #E3F1E8;
+  --lead: #7A5200; --lead-bg: #FFF0C2;
 
-  --t-meta: 0.875rem;
-  --t-body: 1.0625rem;   /* 17px */
-  --t-h1: 2rem;
-  --t-h2: 1.5rem;
-  --t-h3: 1.25rem;
-  --t-clock: 3rem;
-  --lh-body: 1.75;       /* ตัวไทยมีสระบนล่าง ต้องการ line-height สูง */
+  --map-land: #ECE7DC; --map-dot: #C4BCAB;
+  --font: 'Anuphan', system-ui, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, monospace;
+  --t-body: 1.0625rem;   /* 17px — ui-ux.md ข้อ 7 */
+  --lh-body: 1.75;
+  --focus: #111111;
+  --shadow: 0 12px 28px rgba(17, 17, 17, 0.10);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  color-scheme: light;
+}
 
-  --focus: var(--green-900);
-  --shadow-card: 0 2px 10px rgba(19, 61, 38, 0.07);
-  --motion: 180ms cubic-bezier(0.2, 0, 0.2, 1);
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #131209; --surface: #1F1F1F; --sunk: #272727;
+    --ink: #F2EFE8; --ink-2: #C9C5BB; --ink-3: #9A968C;
+    --line: #313131; --line-2: #3C3C3C;
+    --brand-text: #FF8A5C; --brand-tint: #3A2117;
+    --h-from: #FFFFFF; --h-to: #9B9B9B;
+    --alert: #FF8A5C; --alert-bg: #3A2117;
+    --found: #6FD29A; --found-bg: #16301F;
+    --lead: #FFC53D; --lead-bg: #3A2E12;
+    --map-land: #272727; --map-dot: #3C3C3C;
+    --focus: #F2EFE8;
+    --shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :root { --motion: 1ms; }
+  :root { --ease: steps(1, end); }
 }
