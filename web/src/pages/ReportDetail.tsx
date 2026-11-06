@@ -7,6 +7,7 @@ import { useAuth } from '../auth'
 import { ElapsedClock } from '../components/ElapsedClock'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { Field } from '../components/Field'
+import { DistrictMiniMap } from '../components/DistrictMiniMap'
 import { CheckIcon } from '../components/Icons'
 import { PetPhoto } from '../components/PetPhoto'
 import { StatusPill } from '../components/StatusPill'
@@ -211,7 +212,7 @@ export function ReportDetail() {
               <dt>เห็นครั้งสุดท้าย</dt>
               <dd><span className="mono">{dateTimeTh(report.last_seen_at)}</span> · {report.district}{report.area_note ? ` ${report.area_note}` : ''}</dd>
             </dl>
-            <p className="meta">แสดงระดับเขตและจุดสังเกต ไม่ใช่ที่อยู่บ้านของเจ้าของ</p>
+            <DistrictMiniMap district={report.district} sightingDistricts={sightings.map((s) => s.district)} />
             {report.description && (
               <div className="card"><p className="caption">ข้อความจากเจ้าของ</p><p>{report.description}</p></div>
             )}

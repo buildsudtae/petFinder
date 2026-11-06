@@ -16,7 +16,7 @@
   --found: #1E7A4C; --found-bg: #E3F1E8;
   --lead: #7A5200; --lead-bg: #FFF0C2;
 
-  --map-land: #ECE7DC; --map-dot: #C4BCAB; --map-road: #F9F7F2; --map-water: #CFDCE0; --map-park: #D9E3CC; --map-label: #66655F;
+  --map-land: #ECE7DC; --map-label: #66655F;
   --font: 'Anuphan', system-ui, sans-serif;
   --mono: 'Geist Mono', ui-monospace, monospace;
   --t-body: 1.0625rem;   /* 17px — ui-ux.md ข้อ 7 */
@@ -37,7 +37,7 @@
     --alert: #FF8A5C; --alert-bg: #3A2117;
     --found: #6FD29A; --found-bg: #16301F;
     --lead: #FFC53D; --lead-bg: #3A2E12;
-    --map-land: #272727; --map-dot: #3C3C3C; --map-road: #313131; --map-water: #1E2A2D; --map-park: #22291C; --map-label: #9A968C;
+    --map-land: #272727; --map-label: #9A968C;
     --focus: #F2EFE8;
     --shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
     color-scheme: dark;

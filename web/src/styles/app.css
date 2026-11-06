@@ -255,8 +255,26 @@ a, .navl, .navl-btn, .seg button, .tabs button, .thread, .pet-opt, .map-row, .au
 .map-row img, .map-row .pet-thumb { width: 72px; height: 72px; border-radius: 8px; object-fit: cover; }
 .map-pane { position: relative; background: var(--map-land); overflow: hidden; }
 .map-canvas { position: relative; width: 100%; aspect-ratio: 1000 / 640; }
-.map-canvas svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.map-label { position: absolute; font-size: 0.75rem; font-weight: 600; color: var(--map-label); white-space: nowrap; pointer-events: none; text-shadow: 0 0 3px var(--map-land), 0 0 3px var(--map-land); }
+/* Leaflet อยู่ใน stacking context ของตัวเอง — ตัวเลข ชื่อเขต และการ์ดวางทับด้านบน */
+.map-leaflet { position: absolute; inset: 0; z-index: 0; background: var(--map-land); font-family: inherit; }
+.map-overlay { position: absolute; inset: 0; z-index: 1; pointer-events: none; transition: opacity 200ms var(--ease); }
+.map-overlay.moving { opacity: 0; }
+.map-overlay .map-pin, .map-overlay .map-tip { pointer-events: auto; }
+.dz { fill-opacity: 0.3; stroke-width: 2; transition: fill-opacity 300ms var(--ease); }
+.dz.empty { fill: transparent; stroke: var(--ink-2); stroke-opacity: 0.35; stroke-width: 1; cursor: grab; }
+.dz.p-search { fill: var(--sticker-search); stroke: var(--sticker-search); }
+.dz.p-lead { fill: var(--sticker-lead); stroke: var(--sticker-lead); }
+.dz.p-found { fill: var(--sticker-found); stroke: var(--sticker-found); }
+.dz.sel { fill-opacity: 0.45; stroke-width: 4; }
+.dz.home { fill: var(--brand); fill-opacity: 0.14; stroke: var(--brand); stroke-width: 2; stroke-dasharray: 6 5; }
+.leaflet-container .leaflet-bar { border: 1px solid var(--line); box-shadow: 0 1px 2px rgba(17, 17, 17, 0.12); }
+.leaflet-container .leaflet-control-zoom a { width: 40px; height: 40px; line-height: 38px; font-size: 1.25rem; color: var(--ink); background: var(--surface); border-bottom-color: var(--line); transition: background-color 300ms var(--ease); }
+.leaflet-container .leaflet-control-zoom a:hover { background: var(--sunk); }
+.leaflet-container .leaflet-control-zoom a.leaflet-disabled { color: var(--ink-3); background: var(--sunk); }
+.leaflet-container .leaflet-control-attribution { background: var(--surface); color: var(--ink-3); }
+.leaflet-container .leaflet-control-attribution a { color: var(--brand-text); }
+.leaflet-container .leaflet-control-attribution { font-size: 0.6875rem; }
+.map-label { position: absolute; font-size: 0.75rem; font-weight: 700; color: var(--ink); white-space: nowrap; pointer-events: none; text-shadow: 0 0 3px var(--surface), 0 0 3px var(--surface), 0 0 2px var(--surface); }
 .map-pin { position: absolute; translate: -50% -50%; width: 36px; height: 36px; border-radius: 999px; border: 2px solid #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer; font-family: var(--mono); font-weight: 600; box-shadow: 0 2px 8px rgba(17, 17, 17, 0.3); transition: transform 300ms var(--ease), box-shadow 300ms var(--ease); }
 .map-pin:hover { transform: scale(1.1); }
 .map-pin[aria-pressed='true'] { transform: scale(1.2); z-index: 3; box-shadow: 0 0 0 3px var(--ink), 0 2px 8px rgba(17, 17, 17, 0.3); }
@@ -269,7 +287,7 @@ a, .navl, .navl-btn, .seg button, .tabs button, .thread, .pet-opt, .map-row, .au
 .map-tip img, .map-tip .pet-thumb { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; }
 .map-tip a { font-weight: 600; }
 @keyframes tip-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-.map-legend { position: absolute; left: 12px; top: 12px; width: fit-content; max-width: calc(100% - 24px); display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font-size: 0.8125rem; color: var(--ink-2); }
+.map-legend { position: absolute; z-index: 2; left: 12px; top: 12px; width: fit-content; max-width: calc(100% - 24px); display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font-size: 0.8125rem; color: var(--ink-2); }
 .map-legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 999px; border: 1.5px solid #FFFFFF; box-shadow: 0 0 0 1px var(--line-2); margin-right: 4px; vertical-align: -1px; }
 .map-note { padding: 8px 12px; font-size: 0.8125rem; color: var(--ink-3); border-top: 1px solid var(--line); background: var(--surface); }
 
@@ -298,6 +316,19 @@ a, .navl, .navl-btn, .seg button, .tabs button, .thread, .pet-opt, .map-row, .au
   .navs { gap: 0; }
   .faq details p { padding-right: 0; }
 }
+
+/* โหมดมืด: กลับสีภาพถนนจาก OSM ให้เข้ากับพื้นมืด (ไม่กระทบสีเขตที่วาดทับ) */
+@media (prefers-color-scheme: dark) {
+  .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9); }
+}
+
+/* ── แผนที่เล็กในหน้าประกาศ ─────────────────────────── */
+.mini-map { position: relative; height: 220px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.mini-map .map-leaflet { border-radius: inherit; }
+.mini-map .mini-pin { position: absolute; z-index: 1; translate: -50% -50%; pointer-events: none; }
+.mini-cap { position: absolute; z-index: 1; left: 8px; top: 8px; padding: 2px 8px; border-radius: 6px; background: var(--surface); color: var(--ink-3); font-size: 0.75rem; pointer-events: none; }
+.mini-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 0.8125rem; color: var(--ink-2); }
+.mini-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
 
 /* ลดการเคลื่อนไหว — ไว้ท้ายไฟล์ให้ชนะ :hover ที่ประกาศไว้ก่อน */
 @media (prefers-reduced-motion: reduce) {

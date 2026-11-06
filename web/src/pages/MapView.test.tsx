@@ -21,7 +21,7 @@ describe('MapView', () => {
         report('r1', 'ส้มจี๊ด', 'บางกะปิ'),
         report('r2', 'มอลลี่', 'เขตบางกะปิ', 'HAS_LEAD'),   // มีคำว่า "เขต" นำหน้า — ยังเป็นหมุดเดียวกัน
         report('r3', 'โกโก้', 'ลาดพร้าว', 'HAS_LEAD'),
-        report('r4', 'ข้าวตู', 'ซอยบ้านฉัน'),              // ไม่ตรง 50 เขต → ไม่มีหมุด แต่ยังอยู่ในรายการ
+        report('r4', 'ข้าวตู', 'ซอยบ้านฉัน'),              // ไม่ตรง 50 เขต → ไม่อยู่บนแผนที่ แต่ยังอยู่ในรายการ
       ],
       next_cursor: null,
     }))
@@ -32,7 +32,7 @@ describe('MapView', () => {
     const bangkapi = await screen.findByRole('button', { name: /^เขตบางกะปิ 2 ประกาศ สถานะเร่งด่วนสุด กำลังตามหา/ })
     expect(bangkapi).toHaveTextContent('2')
     expect(screen.getByRole('button', { name: /^เขตลาดพร้าว 1 ประกาศ สถานะเร่งด่วนสุด มีเบาะแส/ })).toBeInTheDocument()
-    expect(screen.getByText(/1 ประกาศไม่มีหมุด/)).toBeInTheDocument()
+    expect(screen.getByText(/1 ประกาศไม่อยู่บนแผนที่/)).toBeInTheDocument()
   })
 
   it('กดหมุดแล้วรายการเหลือเฉพาะเขตนั้น และมีการ์ดลิงก์ไปประกาศ', async () => {
