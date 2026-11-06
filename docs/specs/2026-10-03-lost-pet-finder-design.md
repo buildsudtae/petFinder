@@ -62,6 +62,9 @@ relay_threads(id uuid pk, report_id uuid fk not null, finder_id uuid fk not null
 relay_messages(id bigserial pk, thread_id uuid fk not null, sender_id uuid fk not null,
      body text not null, created_at timestamptz default now())
 
+relay_reads(thread_id uuid fk, user_id uuid fk, last_read_message_id bigint not null,
+     updated_at timestamptz default now(), primary key (thread_id, user_id))   -- นับข้อความใหม่ (D9)
+
 outbox(id bigserial pk, topic text not null, payload jsonb not null,
      created_at timestamptz default now(), published_at timestamptz)
 ```
@@ -94,15 +97,20 @@ Auth = JWT ใน cookie `httpOnly; SameSite=Strict; Secure` (dev ปิด Secu
 | POST | `/api/auth/logout` | user | ล้าง cookie |
 | GET | `/api/me` | user | |
 | GET/POST | `/api/pets` | user | pet ของตัวเองเท่านั้น |
+| PUT | `/api/pets/{id}/photo` | owner ของ pet | multipart `photo` · ลบ EXIF ก่อนเก็บ · ลบไฟล์เดิมหลัง commit · ประกาศแสดง `photo_url` ของสัตว์ |
 | POST | `/api/reports` | owner ของ pet | สร้างประกาศ status=`SEARCHING` |
-| GET | `/api/reports` | public | filter `species, district, status`, pagination `limit/cursor` · **ไม่ส่ง `status` มา = คืนเฉพาะ `SEARCHING`+`HAS_LEAD`** (ประกาศที่ปิดแล้วต้องไม่โผล่ในรายการตามหา ตาม FR-06) ส่ง `status=RESOLVED` เพื่อดูย้อนหลังได้ |
+| GET | `/api/reports` | public | filter `species, district, status`, pagination `limit/cursor` · **ไม่ส่ง `status` มา = คืนเฉพาะ `SEARCHING`+`HAS_LEAD`** (ประกาศที่ปิดแล้วต้องไม่โผล่ในรายการตามหา ตาม FR-06) ส่ง `status=RESOLVED` เพื่อดูย้อนหลังได้ · `include_resolved=true` คืนทุกสถานะ · `next_cursor` ใช้ขอหน้าถัดไป (เรียง `created_at` ใหม่ก่อน) · ประกาศมี `resolved_at` |
 | GET | `/api/reports/{id}` | public | ไม่มีข้อมูลติดต่อเจ้าของ |
 | PATCH | `/api/reports/{id}/status` | owner | `{to: RESOLVED\|SEARCHING, reason}` |
 | POST | `/api/reports/{id}/sightings` | user | header `Idempotency-Key` บังคับ · multipart (รูป) |
 | GET | `/api/reports/{id}/sightings` | public | เรียง `created_at` |
 | GET | `/api/reports/{id}/events` | owner | ประวัติสถานะ + เหตุผล (ข้อความอิสระของเจ้าของ จึงไม่เปิดสาธารณะ) · 401 ไม่ login, 403 ไม่ใช่เจ้าของ |
-| POST | `/api/reports/{id}/messages` | owner หรือ finder ที่ส่งเบาะแสแล้ว | สร้าง thread ให้อัตโนมัติถ้ายังไม่มี |
-| GET | `/api/reports/{id}/messages` | participant | |
+| POST | `/api/reports/{id}/messages` | owner หรือ finder ที่ส่งเบาะแสแล้ว | สร้าง thread ให้อัตโนมัติถ้ายังไม่มี · เจ้าของที่มีผู้พบหลายคนต้องส่ง `thread_id` (ไม่ส่ง = 422) |
+| GET | `/api/reports/{id}/messages` | participant | `thread_id` เลือกบทสนทนา (เจ้าของ) |
+| GET | `/api/reports/{id}/threads` | participant | เจ้าของเห็นทุก thread · ผู้พบเห็นของตัวเอง · มีชื่อที่แสดง บริเวณที่แจ้ง ข้อความล่าสุด และจำนวนข้อความใหม่ ไม่มี id ผู้ใช้ |
+| POST | `/api/reports/{id}/threads/{tid}/read` | participant | บันทึกว่าอ่านถึงข้อความล่าสุดแล้ว ค่าไม่ถอยหลัง |
+| GET | `/api/notifications` | user | แจ้งเตือนของตัวเอง 50 รายการล่าสุด + `unread_count` (มาจาก worker จึงตามหลังไม่กี่วินาที) |
+| POST | `/api/notifications/read` | user | `{report_id?}` อ่านทั้งหมดหรือเฉพาะประกาศเดียว |
 | GET | `/api/health` | public | `{status, version, commit, build}` — มาจาก build arg `APP_VERSION/GIT_COMMIT/BUILD_NUMBER` ที่ pipeline ใส่ตอน `docker build` (ใช้ยืนยันว่า deploy ไปแล้วคือ commit ที่ test ผ่าน) |
 | GET | `/api/ready` | public | เช็ค db + broker, ใช้กับ healthcheck |
 
