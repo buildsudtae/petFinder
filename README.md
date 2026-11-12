@@ -65,9 +65,38 @@ curl -fsS http://localhost:8000/api/health
 |---|---|---|
 | `8000` | Traefik → web + api | หน้าเว็บที่ `/` และ API ที่ `/api/*` (ผ่าน load balancer ไป api 2 replica) |
 | `8080` | Traefik dashboard | ดู router/service และ replica ที่ลงทะเบียนอยู่ |
+| `8081` (บนเครื่องโฮสต์ ไม่ใช่ในกล่อง) | Jenkins | ดูและสั่งรัน pipeline (ดูข้อ 4) — ใช้ 8081 เพราะ 8080 เป็นของ Traefik dashboard |
 | ไม่เปิดออกนอกกล่อง | api (x2), worker, db, rabbitmq | คุยกันในเครือข่าย `petnet` ของ Docker เท่านั้น — ตั้งใจให้ไม่มี `ports:` และไม่มี `container_name` ใน api |
 
 ## 4. ตั้งค่า Jenkins credential (สำหรับ `Jenkinsfile`)
+
+### 4.1 ยก Jenkins ขึ้น (ครั้งแรกครั้งเดียว — รันบนเครื่องโฮสต์ ต้องมีกล่อง `devtools` จากข้อ 1 ก่อน)
+
+```bash
+docker network create --subnet 10.201.0.0/24 devtools-ci
+docker run -d --name jenkins --network devtools-ci --restart unless-stopped -p 8081:8080 -v jenkins_home:/var/jenkins_home jenkins/jenkins:lts-jdk21
+docker network connect devtools-ci devtools
+docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
+```
+
+- เปิด http://localhost:8081 วางรหัสจากบรรทัดสุดท้าย → *Install suggested plugins* → สร้างบัญชี admin
+- ติดตั้ง plugin **SSH Agent** เพิ่ม (Manage Jenkins → Plugins → Available) — ไม่อยู่ในชุดแนะนำ แต่ทุก stage ใช้ `sshagent` ไม่มีจะล้มตั้งแต่ stage Connect ด้วย `No such DSL method 'sshagent'`
+- `devtools-ci` ทำให้ Jenkins เรียกกล่องด้วยชื่อ `devtools` ได้ · ต้องกำหนด subnet เอง เพราะ subnet อัตโนมัติ `172.18.0.0/16` ชนกับ `docker0` ภายในกล่อง แล้ว `docker network connect` จะล้ม
+
+### 4.2 ให้ Jenkins SSH เข้ากล่องได้
+
+```bash
+docker exec jenkins ssh-keygen -t ed25519 -N "" -f /var/jenkins_home/devtools_ed25519
+docker exec jenkins cat /var/jenkins_home/devtools_ed25519.pub > devtools_ed25519.pub
+docker cp devtools_ed25519.pub devtools:/tmp/jenkins.pub
+docker exec devtools bash -c "mkdir -p /root/.ssh && chmod 700 /root/.ssh && cat /tmp/jenkins.pub >> /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys"
+docker exec jenkins ssh -i /var/jenkins_home/devtools_ed25519 -o StrictHostKeyChecking=accept-new root@devtools hostname
+docker exec jenkins cat /var/jenkins_home/devtools_ed25519
+```
+
+บรรทัดรองสุดท้ายต้องได้ชื่อเครื่องโดยไม่ถามรหัสผ่าน · บรรทัดสุดท้ายแสดง private key ให้ copy ไปใส่ credential `devtools-ssh` ในตารางด้านล่าง (ห้าม commit หรือส่ง key นี้ให้ใคร) แล้วลบไฟล์ `devtools_ed25519.pub` ที่โฮสต์ทิ้งได้
+
+### 4.3 credential และ job
 
 Jenkins ไม่ build เอง — มัน SSH เข้ากล่องรายวิชาแล้วสั่ง docker ในกล่อง (pattern เดียวกับ lab `003_LAB_Docker_Build_Push` และ `004_LAB_Webhook_Trigger`) ต้องสร้าง credential 2 ตัวที่ **Manage Jenkins → Credentials → (global) → Add Credentials** โดยตั้ง **ID ให้ตรงตามนี้ทุกตัวอักษร**:
 
@@ -83,6 +112,25 @@ Jenkins ไม่ build เอง — มัน SSH เข้ากล่อง�
 - ลำดับ stage: Connect → Secrets → Ship source → Build → Test → Web tests → Push → Deploy → Verify. **Test แดง = ไม่ Push ไม่ Deploy** (stage ถัดไปไม่ทำงาน)
 - Verify ตรวจว่า `/api/health` ของที่ deploy มี `commit` ตรงกับ commit ที่เพิ่งผ่านเทสต์ แล้วรัน `smoke.sh` และ `race.sh` ซ้ำกับระบบที่ deploy จริง
 - `.env` ห้าม commit: stage Secrets ล้ม build ถ้า `.env` ถูก track ใน git (commit เฉพาะ `.env.example`)
+- ค่าใน job: Repository URL `https://github.com/buildsudtae/petFinder.git` · Branch `*/main` · Script Path `Jenkinsfile`
+- Jenkins ที่รันบน localhost รับ webhook จาก GitHub ไม่ได้ (GitHub มองไม่เห็นเครื่องเรา) — กด **Build Now** ในหน้า job เอง หรือใช้ tunnel ถ้าต้องการ trigger อัตโนมัติ
+- stage Ship source **ลบ `/workspace/pettech` ในกล่องทั้งโฟลเดอร์** แล้วใส่โค้ดชุดใหม่แทน และ Deploy ใช้ชื่อโปรเจกต์ `pettech` เดียวกับที่รันด้วยมือ — ระบบที่ยกเองจะถูกแทนที่ (ข้อมูลใน volume ยังอยู่) · `JWT_SECRET` สุ่มใหม่ทุก build ผู้ใช้จึงต้อง login ใหม่หลัง deploy
+
+### 4.4 ปิดเครื่องแล้วเปิดกลับมา
+
+```bash
+# ก่อนปิดเครื่อง — stop เท่านั้น ห้าม docker rm (ลบ devtools = ข้อมูลทั้งหมดในกล่องหาย)
+docker stop jenkins devtools
+
+# เปิดกลับมา
+docker start devtools jenkins
+docker exec devtools bash -c "cd /workspace/pettech && docker compose --env-file .env -f infra/docker-compose.yml start"
+```
+
+- บรรทัดสุดท้ายจำเป็น: container ของระบบในกล่องไม่มี restart policy จึงไม่ขึ้นเองเมื่อกล่องเปิด · `start` เปิดชุดเดิมที่ Jenkins deploy ไว้ (เลข build เดิมใน `/api/health`) ไม่ build ใหม่
+- ไม่ใช้ `up -d` / `up.sh` ตรงนี้ถ้าต้องการโชว์ระบบที่ Jenkins deploy: สองคำสั่งนั้น build ใหม่เป็นแท็ก `dev` และ `/api/health` จะได้ `commit: "unknown"` — ถ้าเผลอใช้ ให้กด Build Now ใหม่
+- `jenkins` ตั้ง `--restart unless-stopped`: ถ้าปิดเครื่องโดยไม่ได้ stop จะเปิดเองพร้อม Docker · `devtools` ต้อง `docker start` เองเสมอ
+- รอราว 20–30 วินาที แล้วเข้า http://localhost:8000 (เว็บ) · http://localhost:8080 (Traefik) · http://localhost:8081 (Jenkins)
 
 ## 5. กฎความถูกต้อง C1–C5 และคำสั่งที่พิสูจน์
 
