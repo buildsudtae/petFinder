@@ -1,4 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600&family=Geist+Mono:wght@500;600&display=swap');
+/* ฟอนต์อยู่ใน build ของเราเอง (@fontsource) — browser ไม่ติดต่อ Google และใช้ได้แม้ไม่มีเน็ต */
+@import '@fontsource/anuphan/400.css';
+@import '@fontsource/anuphan/500.css';
+@import '@fontsource/anuphan/600.css';
+@import '@fontsource/geist-mono/500.css';
+@import '@fontsource/geist-mono/600.css';
 
 /* v5 (D9): โครงแอปแบบ v4 ในโทนกระดาษ + ส้มของใบประกาศ — สถานะยังสื่อ 4 สัญญาณตาม ui-ux.md ข้อ 4 */
 :root {

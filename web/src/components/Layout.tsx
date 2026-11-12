@@ -24,7 +24,10 @@ export function Layout() {
   // และทันทีที่หน้าไหนบอกว่าอ่านแล้ว (เช่นเจ้าของเปิดดูประกาศ) ไม่ให้ badge ค้างตัวเลขเก่า
   const refreshUnread = useCallback(() => {
     if (!user) { setUnread(0); return }
-    api.notifications().then((n) => setUnread(n.unread_count), () => setUnread(0))
+    // badge อยู่ที่ "ประกาศของฉัน" จึงนับเฉพาะเบาะแสใหม่ที่หน้านั้นแสดงและล้างได้ (ไม่นับแจ้งเตือนของผู้พบเห็น)
+    api.notifications().then(
+      (n) => setUnread(n.items.filter((x) => !x.read && x.topic === 'sighting.created').length),
+      () => setUnread(0))
   }, [user])
   useEffect(refreshUnread, [refreshUnread, location.pathname])
   useEffect(() => {

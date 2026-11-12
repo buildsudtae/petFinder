@@ -3,7 +3,7 @@ import socket
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy import create_engine, text
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -109,4 +109,6 @@ def ready():
     db_ok = _check_db(s.database_url)
     broker_ok = _check_broker(s.rabbitmq_url)
     # degraded ไม่ใช่ error: API ยังรับคำขอได้เมื่อ broker ล่ม งาน async ค้างใน outbox
-    return {"status": "ok" if db_ok and broker_ok else "degraded", "db": db_ok, "broker": broker_ok}
+    # แต่ DB ล่ม = รับงานไม่ได้จริง → 503 ให้ probe/monitor เห็น
+    body = {"status": "ok" if db_ok and broker_ok else "degraded", "db": db_ok, "broker": broker_ok}
+    return body if db_ok else JSONResponse(body, status_code=503)

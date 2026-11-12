@@ -45,6 +45,31 @@ def test_handle_status_changed_twice_notifies_each_finder_once(db_session, sight
     assert db_session.scalar(select(func.count(Notification.id))) == 1
 
 
+def test_status_change_notifies_finder_who_never_opened_a_thread(db_session, sighting_factory):
+    # a finder who only sent a sighting has no RelayThread; they still need to hear the pet was found
+    from worker.tasks import handle_status_changed
+    s = sighting_factory()
+
+    handle_status_changed(str(s.report_id), "HAS_LEAD", "RESOLVED", 1)
+
+    rows = list(db_session.scalars(select(Notification).where(Notification.user_id == s.finder_id)))
+    assert [r.topic for r in rows] == ["report.status_changed"]
+
+
+def test_finder_with_several_sightings_gets_one_status_notification(db_session, sighting_factory):
+    from datetime import UTC, datetime
+    from app.domain.sightings.models import Sighting
+    from worker.tasks import handle_status_changed
+    s = sighting_factory()
+    db_session.add(Sighting(report_id=s.report_id, finder_id=s.finder_id, seen_at=datetime.now(UTC),
+                            district="บางกะปิ", idem_key="second"))
+    db_session.commit()
+
+    handle_status_changed(str(s.report_id), "HAS_LEAD", "RESOLVED", 1)
+
+    assert db_session.scalar(select(func.count(Notification.id))) == 1
+
+
 def test_drain_outbox_publishes_and_marks_rows(db_session, sighting_factory, monkeypatch):
     import worker.tasks as tasks
     s = sighting_factory()
@@ -134,9 +159,11 @@ def test_real_routes_pass_payload_keys_to_delay(monkeypatch):
 
 def test_reopen_then_resolve_again_notifies_finder_twice(db_session, make_user, open_report, monkeypatch):
     import worker.tasks as tasks
-    from app.domain.relay.models import RelayThread
+    from datetime import UTC, datetime
+    from app.domain.sightings.models import Sighting
     finder = make_user()
-    db_session.add(RelayThread(report_id=open_report["id"], finder_id=finder["id"]))
+    db_session.add(Sighting(report_id=open_report["id"], finder_id=finder["id"], seen_at=datetime.now(UTC),
+                            district="บางกะปิ", idem_key="reopen-1"))
     db_session.commit()
     c, rid = open_report["client"], open_report["id"]
     for to in ("RESOLVED", "SEARCHING", "RESOLVED"):
@@ -147,4 +174,5 @@ def test_reopen_then_resolve_again_notifies_finder_twice(db_session, make_user, 
     assert tasks.drain_outbox() == 3
 
     rows = list(db_session.scalars(select(Notification).where(Notification.user_id == finder["id"])))
-    assert [r.payload["to"] for r in sorted(rows, key=lambda r: r.id)] == ["RESOLVED", "SEARCHING", "RESOLVED"]
+    # ผู้พบมีเบาะแสอยู่แล้ว → เปิดใหม่กลับเป็น HAS_LEAD (FR-06)
+    assert [r.payload["to"] for r in sorted(rows, key=lambda r: r.id)] == ["RESOLVED", "HAS_LEAD", "RESOLVED"]

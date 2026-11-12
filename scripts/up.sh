@@ -23,6 +23,6 @@ for i in $(seq 1 60); do
   printf '.'; sleep 2
 done
 echo
-docker compose -f infra/docker-compose.yml ps
-[ "$ok" = 1 ] || { echo "ระบบไม่พร้อมภายใน 120 วินาที — ดู log: docker compose -f infra/docker-compose.yml logs api"; exit 1; }
+docker compose --env-file .env -f infra/docker-compose.yml ps
+[ "$ok" = 1 ] || { echo "ระบบไม่พร้อมภายใน 120 วินาที — ดู log: docker compose --env-file .env -f infra/docker-compose.yml logs api"; exit 1; }
 echo "เปิด http://localhost:8000 · dashboard http://localhost:8080"

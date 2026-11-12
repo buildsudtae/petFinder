@@ -15,6 +15,13 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
   if (response.status === 204) return undefined as T
 
   const body = await response.json().catch(() => null)
+  // Traefik ตัด 429/413 ก่อนถึง API จึงไม่มี JSON ตาม contract — แปลงเป็นข้อความที่ผู้ใช้ทำอะไรต่อได้
+  if (!body && response.status === 429) {
+    throw new ApiError('RATE_LIMITED', 'ส่งคำขอถี่เกินไป กรุณารอสักครู่แล้วลองใหม่', null)
+  }
+  if (!body && response.status === 413) {
+    throw new ApiError('VALIDATION', 'ไฟล์รูปต้องมีขนาดไม่เกิน 5 MB', 'photo')
+  }
   if (!response.ok) {
     throw new ApiError(
       body?.code ?? 'VALIDATION',

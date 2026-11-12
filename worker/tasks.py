@@ -11,7 +11,6 @@ from app.db import SessionLocal
 from app.domain.auth import models as _auth_models  # noqa: F401
 from app.domain.pets import models as _pets_models  # noqa: F401
 from app.domain.notifications.service import notify_once
-from app.domain.relay.models import RelayThread
 from app.domain.reports.models import LostReport
 from app.domain.sightings.models import Sighting
 from app.outbox import Outbox
@@ -62,7 +61,8 @@ def handle_sighting_created(sighting_id: str) -> None:
 def handle_status_changed(report_id: str, from_status: str, to_status: str, event_id: int) -> None:
     rid = uuid.UUID(report_id)
     with SessionLocal() as db:
-        finders = list(db.scalars(select(RelayThread.finder_id).where(RelayThread.report_id == rid)))
+        # ทุกคนที่เคยส่งเบาะแส ไม่ใช่แค่คนที่เปิดแชท (thread เกิดตอนส่งข้อความแรกเท่านั้น)
+        finders = list(db.scalars(select(Sighting.finder_id).where(Sighting.report_id == rid).distinct()))
         for finder_id in finders:
             # idempotent: unique (user_id, dedupe_key) ต่อผู้พบแต่ละคน
             notify_once(db, finder_id, "report.status_changed",
