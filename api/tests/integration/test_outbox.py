@@ -37,3 +37,11 @@ def test_ready_degrades_instead_of_failing_when_broker_is_down(client, monkeypat
     assert r.status_code == 200                  # ห้าม 500 — broker ล่มแค่ degraded
     assert r.json()["broker"] is False
     assert r.json()["status"] == "degraded"
+
+
+def test_ready_is_503_when_database_is_down(client, monkeypatch):
+    import app.main as main
+    monkeypatch.setattr(main, "_check_db", lambda url: False)
+    r = client.get("/api/ready")
+    assert r.status_code == 503                  # probe ต้องเห็นว่ารับงานไม่ได้ ไม่ใช่ 200
+    assert r.json()["db"] is False and r.json()["status"] == "degraded"

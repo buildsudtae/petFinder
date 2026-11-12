@@ -55,6 +55,7 @@
 
 **1. nginx ตัวเดียวทำทั้ง static และ reverse proxy (ไม่ใช้ Traefik)**
 ได้ origin เดียวเหมือนกันและลด container ลงหนึ่งตัว แต่ต้องแก้ไฟล์ `nginx.conf` ทุกครั้งที่เพิ่ม/ลด service, ไม่มี rate limit ที่ตั้งผ่าน label, ไม่มี dashboard ตรวจ routing และไม่มี load balancing ให้ใช้ทันที — ตัดสินใจรับ container เพิ่มหนึ่งตัวเพื่อแลกกับสิ่งเหล่านี้
+→ dashboard เปิดแบบ `--api.insecure` ที่พอร์ต 8080 **โดยตั้งใจ** เพื่อโชว์ routing และ 2 replica ตอน demo · ยอมรับว่าใครเข้าถึงพอร์ตนี้ได้จะเห็น router/middleware และ IP ภายในของ api โดยไม่ต้อง login · ถ้าเปิดสู่เครือข่ายจริงต้องปิดหรือใส่ basicAuth ก่อน
 
 **2. ตัด RabbitMQ ใช้ `outbox` ใน Postgres เป็นคิวเดียว**
 ตารางเดียวทำได้จริงและลด container ไปสองตัว แต่ต้องเขียน retry, backoff, การล็อกแถวให้ worker หลายตัวไม่หยิบงานซ้ำ และ dead-letter ด้วยมือทั้งหมด ซึ่งเขียนผิดง่ายกว่าการใช้ broker ที่มีให้แล้ว

@@ -28,6 +28,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       RABBITMQ_URL: amqp://pettech:${RABBITMQ_PASSWORD}@rabbitmq:5672//
       UPLOAD_DIR: /data/uploads
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
     volumes:
       - uploads:/data/uploads
     deploy:
