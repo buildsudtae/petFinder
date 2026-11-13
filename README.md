@@ -161,9 +161,8 @@ docker exec devtools bash -c "cd /workspace/pettech && docker compose --env-file
 
 ## 7. การใช้ AI Coding Tools (ตามข้อ 8 ของรายละเอียดโครงการ)
 
-- **เครื่องมือ:** Claude Code (Anthropic) · ระบบที่ส่งมอบ**ไม่มี** LLM/AI ทำงานอยู่ข้างใน (D4)
+- **เครื่องมือ:** Claude Code (Anthropic)
 - **ใช้ช่วยงานประเภทใด:** อ่านและสรุปข้อกำหนดรายวิชา · ออกแบบ (spec, ADR, mockup v5) · เขียนโค้ด API, worker, หน้าเว็บ, migration · เขียนเทสต์และสคริปต์ตรวจ (smoke, race, degraded) · เอกสาร (README, traceability, architecture)
-- **วิธีระบุใน Git:** commit ที่ AI ช่วยมีบรรทัด `Co-Authored-By: Claude …` ท้ายข้อความ commit
 - **ทีมยังรับผิดชอบเอง:** ผลทุกอย่างผ่านเทสต์อัตโนมัติและ pipeline เดียวกับโค้ดที่เขียนเอง และสมาชิกต้องอธิบาย ตามรอย data flow และแก้ defect ในส่วนของตนได้ (Ownership Gate)
 
 ## 8. ข้อจำกัดที่รู้อยู่แล้ว
